@@ -24,34 +24,45 @@
              :col2-percent 0.6}}))
 
 (defn sel-down [state]
-  (update state
-          :sel
-          #(min (- (count (state :files)) 1) (inc %))))
+  (if (< (state :sel) (- (count (state :files)) 1))
+    (as-> state st
+      (update st :sel inc)
+      (if (>= (+ (st :sel) (st :scroll-pos)) (get-in st [:layout :list-height]))
+        (update st :scroll-pos inc)
+        st))
+    state))
 
 (defn sel-up [state]
-  (update state
-          :sel
-          #(max 0 (dec %))))
+  (if (> (state :sel) 0)
+     (as-> state st
+       (update st :sel dec)
+       (if (< (st :sel) (st :scroll-pos))
+         (update st :scroll-pos dec)
+         st))
+     state))
 
 (defn folder-up [state]
   (let [name (.getName (get-in state [:par-dir :file]))
         par-file (.getParentFile (get-in state [:par-dir :file]))
         par-files (generate-file-list par-file)]
-    (as-> state st
-      (assoc st :file (get-in st [:par-dir :file]))
-      (assoc st :files (get-in st [:par-dir :files]))
-      (assoc st :sel (get-in st [:par-dir :sel]))
-      (assoc-in st [:par-dir :file] par-file)
-      (assoc-in st [:par-dir :files] par-files)
-      (assoc-in st [:par-dir :sel] (.indexOf par-files name)))))
+    (-> state
+      (assoc :file (get-in state [:par-dir :file]))
+      (assoc :files (get-in state [:par-dir :files]))
+      (assoc :sel (get-in state [:par-dir :sel]))
+      (assoc :scroll-pos 0)
+      (assoc-in [:par-dir :file] par-file)
+      (assoc-in [:par-dir :files] par-files)
+      (assoc-in [:par-dir :sel] (.indexOf par-files name)))))
 
 (defn folder-down [state]
-  (as-> state st
-    (assoc-in st [:par-dir :file] (st :file))
-    (assoc-in st [:par-dir :files] (st :files))
-    (assoc-in st [:par-dir :sel] (st :sel))
-    (assoc st :file (io/file (str (.getAbsolutePath (state :file))
-                                  "/"
-                                  ((state :files) (state :sel)))))
-    (assoc st :files (generate-file-list (st :file)))
-    (assoc st :sel 0)))
+  (let [file (io/file (str (.getAbsolutePath (state :file))
+                           "/"
+                           ((state :files) (state :sel))))
+        files (generate-file-list file)]
+    (-> state
+      (assoc-in [:par-dir :file] (state :file))
+      (assoc-in [:par-dir :files] (state :files))
+      (assoc-in [:par-dir :sel] (state :sel))
+      (assoc :file file)
+      (assoc :files files)
+      (assoc :sel 0))))
