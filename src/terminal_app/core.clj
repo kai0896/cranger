@@ -42,8 +42,8 @@
                   (- (ly :col1-char) 2)
                   (ly :top-bar-height)
                   height
-                  (state :files)
-                  (state :sel))
+                  (get-in state [:par-dir :files])
+                  (get-in state [:par-dir :sel]))
     (render-files (ly :col1-char)
                   (- (ly :col2-char) (ly :col1-char) 2)
                   (ly :top-bar-height)
