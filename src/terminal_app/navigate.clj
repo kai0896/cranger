@@ -3,11 +3,15 @@
   (:require [clojure.string :as string])
   (:require [clojure.java.io :as io]))
 
+(defn sort-file-list [files]
+  (vec (sort-by (juxt :nodir? :hidden? :name) files)))
+
 (defn generate-file-list [file]
-  (mapv (fn [f] {:obj f
-                 :name (.getName f)
-                 :dir? (.isDirectory f)})
-        (.listFiles file)))
+  (sort-file-list (mapv (fn [f] {:obj f
+                                 :name (.getName f)
+                                 :nodir? (not (.isDirectory f))
+                                 :hidden? (.isHidden f)})
+                        (.listFiles file))))
 
 (defn get-sel-file [dir]
   (get-in dir [:files (dir :sel) :obj]))
@@ -94,7 +98,7 @@
         (assoc-in [:par-dir :scroll-pos] (max 0 (- par-sel (get-in state [:layout :list-height]) -1))))))
 
 (defn open-file [file]
-  (print "TODO open file"))
+  nil)
 
 (defn folder-down [state]
   (let [file (get-sel-file (state :dir))]

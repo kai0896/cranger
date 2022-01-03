@@ -18,9 +18,9 @@
 (defn get-line-style [dir i]
   (if (= (+ i (dir :scroll-pos)) (dir :sel)) {:fg :black
                                               :bg :cyan}
-      (if (get-in dir [:files i :dir?])
-        {:fg :cyan}
-        {})))
+      (if (get-in dir [:files i :nodir?])
+        {}
+        {:fg :cyan})))
 
 (defn render-files [col-start col-width ly dir]
   (doseq [i (range (ly :list-height))]
@@ -92,4 +92,5 @@
   [& args]
   (s/start scr)
   (input-cycle (nav/init-state "/home/kai"))
-  (s/stop scr))
+  (s/stop scr)
+  (System/exit 1))
