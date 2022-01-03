@@ -1,4 +1,6 @@
 (ns terminal-app.navigate
+  (:require [clojure.java.shell :as sh])
+  (:require [clojure.string :as string])
   (:require [clojure.java.io :as io]))
 
 (defn generate-file-list [file]
@@ -9,6 +11,13 @@
 
 (defn get-sel-file [dir]
   (get-in dir [:files (dir :sel) :obj]))
+
+(defn get-file-content [file]
+  (let [file-info ((sh/sh "file" file) :out)]
+    (if (.contains file-info " text")
+      (with-open [rdr (io/reader file)]
+        (vec (take 100 (line-seq rdr))))
+      [(string/join " " (drop 1 (string/split (string/trim (str file-info)) #" ")))])))
 
 (defn get-prev-state [file]
   (if (.isDirectory file)
@@ -21,7 +30,7 @@
      :filess nil
      :sel nil
      :scroll-pos nil
-     :content "this is a file"}))
+     :content (get-file-content (.getAbsolutePath file))}))
 
 (defn update-prev-state [state]
   (assoc state

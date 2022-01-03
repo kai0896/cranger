@@ -7,9 +7,9 @@
   (def scr (s/get-screen :text))
   (def scr (s/get-screen :swing)))
 
-(defn prepare-line [files i width]
-  (if (< i (count files))
-    (let [line (get-in files [i :name])]
+(defn prepare-line [f-list i width]
+  (if (< i (count f-list))
+    (let [line (f-list i)]
       (str " "
            (subs line 0 (min (count line) width))
            (apply str (repeat (- width (count line)) \space))))
@@ -27,8 +27,17 @@
     (s/put-string scr
                   col-start
                   (+ i (ly :top-bar-height))
-                  (prepare-line (dir :files) (+ i (dir :scroll-pos)) col-width)
+                  (prepare-line (mapv (fn [n] (n :name)) (dir :files))
+                                (+ i (dir :scroll-pos))
+                                col-width)
                   (get-line-style dir i))))
+
+(defn render-prev-text [col-start col-width ly content]
+  (doseq [i (range (ly :list-height))]
+    (s/put-string scr
+                  col-start
+                  (+ i (ly :top-bar-height))
+                  (prepare-line content i  col-width))))
 
 (defn do-render [state]
   (let [ly (state :layout)]
@@ -40,12 +49,17 @@
                   (- (ly :col2-char) (ly :col1-char) 2)
                   ly
                   (state :dir))
-    (if (get-in state [:prev-dir :content])
-      (print "content")
-      (render-files (ly :col2-char)
-                    (- (get-in ly [:size 0]) (ly :col2-char))
-                    ly
-                    (state :prev-dir)))))
+    (let [col-start (ly :col2-char)
+          col-width (- (get-in ly [:size 0]) (ly :col2-char))]
+      (if-let [content (get-in state [:prev-dir :content])]
+        (render-prev-text col-start
+                          col-width
+                          ly
+                          content)
+        (render-files col-start
+                      col-width
+                      ly
+                      (state :prev-dir))))))
 
 (defn handle-input [state]
   (case (s/get-key-blocking scr)
