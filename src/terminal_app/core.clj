@@ -40,10 +40,12 @@
                   (- (ly :col2-char) (ly :col1-char) 2)
                   ly
                   (state :dir))
-    (render-files (ly :col2-char)
-                  (- (get-in ly [:size 0]) (ly :col2-char))
-                  ly
-                  (state :dir))))
+    (if (get-in state [:prev-dir :content])
+      (print "content")
+      (render-files (ly :col2-char)
+                    (- (get-in ly [:size 0]) (ly :col2-char))
+                    ly
+                    (state :prev-dir)))))
 
 (defn handle-input [state]
   (case (s/get-key-blocking scr)

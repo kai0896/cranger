@@ -1,6 +1,10 @@
 #+TITLE: Todos
 
-- fix issue when scrolling up and down at the bottom
+* Features
 - sort prioratizing folders
-- add check when no directory found
 - add documentation
+
+* Bugs
+- issue when scrolling up and down at the bottom
+- crash when going al the way up
+- crash when opening empty folder
