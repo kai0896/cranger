@@ -1,8 +1,9 @@
 #+TITLE: Todos
 
-- calculate height at get-screen-size
-- sort
+- fix issue when scrolling up and down at the bottom
+- sort prioratizing folders
 - color dif for folders and files
 - nest file, files, sel etc. in a sub-map
 - make 'files' a vector of maps with more information?
 - add check when no directory found
+- add documentation

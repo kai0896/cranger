@@ -43,7 +43,7 @@
                   (ly :list-height)
                   (get-in state [:par-dir :files])
                   (get-in state [:par-dir :sel])
-                  0)
+                  (get-in state [:par-dir :scroll-pos]))
     (render-files (ly :col1-char)
                   (- (ly :col2-char) (ly :col1-char) 2)
                   (ly :top-bar-height)
@@ -78,17 +78,6 @@
                  :col1-char (int (* (new-size 0) (ly :col1-percent)))
                  :col2-char (int (* (new-size 0) (ly :col2-percent))))
       state)))
-
-;; (pprint (get-screen-size {:file nil
-;;                           :files nil
-;;                           :sel 0
-;;                           :sel-prev nil
-;;                           :scroll-pos 0
-;;                           :layout {:size []
-;;                                    :top-bar-height 1
-;;                                    :bottom-bar-height 1
-;;                                    :col1-percent 0.2
-;;                                    :col2-percent 0.6}}))
 
 (defn input-cycle [state]
   (when state (let [st (get-screen-size state)]
