@@ -62,7 +62,7 @@
                       (state :prev-dir))))))
 
 (defn handle-input [state]
-  (case (s/get-key-blocking scr)
+  (case (s/get-key-blocking scr {:interval 5})
     \j (nav/sel-down state)
     \k (nav/sel-up state)
     \h (nav/folder-up state)

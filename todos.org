@@ -1,10 +1,11 @@
 #+TITLE: Todos
 
 * Features
-- sort prioratizing folders
+- make sorting not prioratize Capital letters
+- specifically allow some files-types like json or sh for preview
 - add documentation
 
 * Bugs
 - issue when scrolling up and down at the bottom
-- crash when going al the way up
+- crash when going al the way up the dir hirarchy
 - crash when opening empty folder
