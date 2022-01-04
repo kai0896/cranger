@@ -1,6 +1,7 @@
 (ns terminal-app.core
   (:require [lanterna.screen :as s])
   (:require [terminal-app.navigate :as nav])
+  (:require [clojure.java.io :as io])
   (:gen-class))
 
 (if true
@@ -107,7 +108,11 @@
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (s/start scr)
-  (input-cycle (nav/init-state "/home/kai"))
-  (s/stop scr)
-  (System/exit 1))
+  (let [path (if (and (> (count args) 0)
+                      (.exists (io/file (first args))))
+               (first args)
+               "/home")]
+    (s/start scr)
+    (input-cycle (nav/init-state path))
+    (s/stop scr)
+    (System/exit 1)))

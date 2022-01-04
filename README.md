@@ -1,8 +1,10 @@
 # terminal-app
 
-FIXME: description
+A simple terminal file manager like ranger
 
 ## Installation
+
+TODO: set up graalvm
 
 Download from http://example.com/FIXME.
 
@@ -12,21 +14,9 @@ FIXME: explanation
 
     $ java -jar terminal-app-0.1.0-standalone.jar [args]
 
-## Options
+## Infos
 
-FIXME: listing of options this app accepts.
-
-## Examples
-
-...
-
-### Bugs
-
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
+running it will always open the home directory, however one can pass $PWD as first argument to run it in the current working directory
 
 ## License
 
