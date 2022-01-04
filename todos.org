@@ -1,10 +1,16 @@
 #+TITLE: Todos
 
 * Features
-- make sorting not prioratize Capital letters
 - specifically allow some files-types like json or sh for preview
+- add bottom bar
+- add file/folder informaion
+- add search functionality
+- add half page up/down movement
+- add configuration file support
 - add documentation
+- add keybind helper
 
 * Bugs
+- make sorting not prioratize Capital letters
 - issue when scrolling up and down at the bottom
 - crash when opening empty folder

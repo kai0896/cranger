@@ -79,13 +79,18 @@
                       ly
                       (state :prev-dir))))))
 
+(defn exit [state]
+  (s/stop scr)
+  (println (str " exit-path: " (.getAbsolutePath (get-in state [:dir :file]))))
+  (System/exit 1))
+
 (defn handle-input [state]
   (case (s/get-key-blocking scr {:interval 5})
     \j (nav/sel-down state)
     \k (nav/sel-up state)
     \h (nav/folder-up state)
     \l (nav/folder-down state)
-    \q nil
+    \q (exit state)
     state))
 
 (defn get-screen-size [state]
@@ -106,7 +111,6 @@
                 (input-cycle (handle-input st)))))
 
 (defn -main
-  "I don't do a whole lot ... yet."
   [& args]
   (let [path (if (and (> (count args) 0)
                       (.exists (io/file (first args))))
