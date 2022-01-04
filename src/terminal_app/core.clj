@@ -7,13 +7,16 @@
   (def scr (s/get-screen :text))
   (def scr (s/get-screen :swing)))
 
+(defn get-empty-str [len]
+  (apply str (repeat len \space)))
+
 (defn prepare-line [f-list i width]
   (if (< i (count f-list))
     (let [line (f-list i)]
       (str " "
            (subs line 0 (min (count line) width))
-           (apply str (repeat (- width (count line)) \space))))
-    (apply str (repeat (inc width) \space))))
+           (get-empty-str (- width (count line)))))
+    (get-empty-str (inc width))))
 
 (defn get-line-style [dir i]
   (if (= (+ i (dir :scroll-pos)) (dir :sel)) {:fg :black
@@ -39,8 +42,22 @@
                   (+ i (ly :top-bar-height))
                   (prepare-line content i  col-width))))
 
+(defn render-top-bar [width top-bar]
+  (let [path-len (count (top-bar :path))]
+    (s/put-string scr 0 0
+                  (str " " (top-bar :path) "/")
+                  {:fg :cyan})
+    (s/put-string scr (+ path-len 2) 0
+                  (str (top-bar :file)
+                       (get-empty-str (- width
+                                         path-len
+                                         (count (top-bar :file))
+                                         2))))))
+
 (defn do-render [state]
   (let [ly (state :layout)]
+    (render-top-bar (get-in ly [:size 0])
+                    (state :top-bar))
     (render-files 0
                   (- (ly :col1-char) 2)
                   ly

@@ -41,6 +41,12 @@
          :prev-dir
          (get-prev-state (get-sel-file (state :dir)))))
 
+(defn update-top-bar [state]
+  (let [dir (state :dir)]
+    (update state :top-bar assoc
+            :path (.getAbsolutePath (dir :file))
+            :file (get-in dir [:files (dir :sel) :name]))))
+
 (defn init-state [path]
   (let [file (io/file path)
         files (generate-file-list file)
@@ -55,6 +61,8 @@
                 :sel 0
                 :scroll-pos 0}
      :prev-dir (get-prev-state (get-in files [0 :obj]))
+     :top-bar  {:path path
+                :file (get-in files [0 :name])}
      :layout   {:size []
                 :top-bar-height 1
                 :bottom-bar-height 1
@@ -67,6 +75,7 @@
     (as-> state st
       (update-in st [:dir :sel] inc)
       (update-prev-state st)
+      (update-top-bar st)
       (if (>= (+ (get-in st [:dir :sel]) (get-in st [:dir :scroll-pos]))
               (get-in st [:layout :list-height]))
         (update-in st [:dir :scroll-pos] inc)
@@ -78,6 +87,7 @@
      (as-> state st
        (update-in st [:dir :sel] dec)
        (update-prev-state st)
+       (update-top-bar st)
        (if (< (get-in st [:dir :sel])
               (get-in st [:dir :scroll-pos]))
          (update-in st [:dir :scroll-pos] dec)
@@ -89,6 +99,7 @@
     (as-> state st
       (assoc st :dir (state :par-dir))
       (update-prev-state st)
+      (update-top-bar st)
       (if-let [par-file (.getParentFile (get-in st [:par-dir :file]))]
         (let [name      (.getName (get-in st[:par-dir :file]))
               par-files (generate-file-list par-file)
@@ -116,6 +127,7 @@
       (-> state
           (assoc :par-dir (state :dir))
           (assoc :dir (state :prev-dir))
-          (update-prev-state))
+          (update-prev-state)
+          (update-top-bar))
       (do (open-file file)
           state))))
