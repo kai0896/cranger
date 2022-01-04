@@ -7,5 +7,4 @@
 
 * Bugs
 - issue when scrolling up and down at the bottom
-- crash when going al the way up the dir hirarchy
 - crash when opening empty folder

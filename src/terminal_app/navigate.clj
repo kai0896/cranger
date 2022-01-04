@@ -52,7 +52,7 @@
                 :scroll-pos 0}
      :par-dir  {:file par-file
                 :files par-files
-                :sel (.indexOf par-files (.getName file))
+                :sel 0
                 :scroll-pos 0}
      :prev-dir (get-prev-state (get-in files [0 :obj]))
      :layout   {:size []
@@ -85,17 +85,27 @@
      state))
 
 (defn folder-up [state]
-  (let [name (.getName (get-in state [:par-dir :file]))
-        par-file (.getParentFile (get-in state [:par-dir :file]))
-        par-files (generate-file-list par-file)
-        par-sel (.indexOf (mapv (fn [f] (f :name)) par-files) name)]
-    (-> state
-        (assoc :dir (state :par-dir))
-        (update-prev-state)
-        (assoc-in [:par-dir :file] par-file)
-        (assoc-in [:par-dir :files] par-files)
-        (assoc-in [:par-dir :sel] par-sel)
-        (assoc-in [:par-dir :scroll-pos] (max 0 (- par-sel (get-in state [:layout :list-height]) -1))))))
+  (if (get-in state [:par-dir :file])
+    (as-> state st
+      (assoc st :dir (state :par-dir))
+      (update-prev-state st)
+      (if-let [par-file (.getParentFile (get-in st [:par-dir :file]))]
+        (let [name      (.getName (get-in st[:par-dir :file]))
+              par-files (generate-file-list par-file)
+              par-sel   (.indexOf (mapv (fn [f] (f :name)) par-files) name)]
+          (update st :par-dir assoc
+                  :file par-file
+                  :files par-files
+                  :sel par-sel
+                  :scroll-pos (max 0 (- par-sel
+                                        (get-in st [:layout :list-height])
+                                        -1))))
+        (update st :par-dir assoc
+                :file nil
+                :files []
+                :sel -1
+                :scroll-pos 0)))
+    state))
 
 (defn open-file [file]
   nil)
