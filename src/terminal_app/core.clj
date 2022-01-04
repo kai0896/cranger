@@ -84,12 +84,44 @@
   (println (str " exit-path: " (.getAbsolutePath (get-in state [:dir :file]))))
   (System/exit 1))
 
+(defn render-search [state query]
+  (let [size (get-in state [:layout :size])
+        query-str (apply str query)]
+    (s/put-string scr
+                  0
+                  (- (size 1) 1)
+                  (apply str
+                         " /"
+                         query-str
+                         (get-empty-str (- (size 0) (count query)))))
+    (s/move-cursor scr
+                   (+ 2 (count query))
+                   (- (size 1) 1))))
+
+(defn search-files [state query]
+  (let [st (nav/update-search-results state query)]
+    (render-search st query)
+    (do-render st)
+    (s/redraw scr)
+    (let [key-res (s/get-key-blocking scr {:interval 5})]
+      (case key-res
+        :escape st
+        :enter st
+        :backspace (search-files st(if (not-empty query)
+                                         (pop query)
+                                         query))
+        (search-files st(if (char? key-res)
+                              (conj query key-res)
+                              query))))))
+
 (defn handle-input [state]
   (case (s/get-key-blocking scr {:interval 5})
     \j (nav/sel-down state)
     \k (nav/sel-up state)
     \h (nav/folder-up state)
     \l (nav/folder-down state)
+    \/ (search-files state [])
+    \n (nav/search-res-down state)
     \q (exit state)
     state))
 
@@ -118,5 +150,6 @@
                "/home")]
     (s/start scr)
     (input-cycle (nav/init-state path))
+    ;; (input-cycle (nav/init-state "/home/kai"))
     (s/stop scr)
     (System/exit 1)))

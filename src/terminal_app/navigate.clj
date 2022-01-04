@@ -131,3 +131,26 @@
           (update-top-bar))
       (do (open-file file)
           state))))
+
+(defn search-res-down [state]
+  (let [dir (state :dir)]
+    (if (not-empty (dir :search-res))
+      (update-in state
+                 [:dir :sel]
+                 #(if-let [new-sel (first (for [i (dir :search-res)
+                                                :when (> i %)] i))]
+                    new-sel
+                    %))
+      state)))
+
+(defn update-search-results [state query]
+  (if (not-empty query)
+    (let [files (get-in state [:dir :files])
+          search-res (vec (for [i (range (count files))
+                                :let [name (get-in files [i :name])]
+                                :when (.contains name (apply str query))]
+                            i))]
+      (-> state
+          (assoc-in [:dir :search-res] search-res)
+          (search-res-down)))
+    state))
