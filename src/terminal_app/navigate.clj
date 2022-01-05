@@ -132,16 +132,25 @@
       (do (open-file file)
           state))))
 
-(defn search-res-down [state]
+(defn search-res-sel [state fn-pos fn-comp]
   (let [dir (state :dir)]
     (if (not-empty (dir :search-res))
       (update-in state
                  [:dir :sel]
-                 #(if-let [new-sel (first (for [i (dir :search-res)
-                                                :when (> i %)] i))]
+                 #(if-let [new-sel (fn-pos (for [i (dir :search-res)
+                                                :when (fn-comp i %)] i))]
                     new-sel
-                    %))
+                    (fn-pos (dir :search-res))))
       state)))
+
+(defn search-res-down [state]
+  (search-res-sel state first >))
+
+(defn search-res-up [state]
+  (search-res-sel state last <))
+
+(defn search-res-reset [state]
+  (assoc-in state [:dir :search-res] []))
 
 (defn update-search-results [state query]
   (if (not-empty query)
@@ -153,4 +162,4 @@
       (-> state
           (assoc-in [:dir :search-res] search-res)
           (search-res-down)))
-    state))
+    (assoc-in state [:dir :search-res] [])))
