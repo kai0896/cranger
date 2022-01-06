@@ -81,10 +81,6 @@
                          outside-top sel
                          :else %)))))
 
-(adjust-scroll-pos {:dir    {:sel         4
-                             :scroll-pos  4}
-                    :layout {:list-height 10}})
-
 (defn sel-down [state]
   (if (< (get-in state [:dir :sel])
          (- (count (get-in state [:dir :files])) 1))
@@ -92,12 +88,7 @@
       (update-in st [:dir :sel] inc)
       (update-prev-state st)
       (update-top-bar st)
-      (adjust-scroll-pos st)
-      ;; (if (>= (+ (get-in st [:dir :sel]) (get-in st [:dir :scroll-pos]))
-      ;;         (get-in st [:layout :list-height]))
-      ;;   (update-in st [:dir :scroll-pos] inc)
-      ;;   st)
-      )
+      (adjust-scroll-pos st))
     state))
 
 (defn sel-up [state]
@@ -106,13 +97,20 @@
        (update-in st [:dir :sel] dec)
        (update-prev-state st)
        (update-top-bar st)
-       (adjust-scroll-pos st)
-       ;; (if (< (get-in st [:dir :sel])
-       ;;        (get-in st [:dir :scroll-pos]))
-       ;;   (update-in st [:dir :scroll-pos] dec)
-       ;;   st)
-         )
+       (adjust-scroll-pos st))
        state))
+
+(defn sel-top [state]
+  (update state :dir assoc
+          :sel 0
+          :scroll-pos 0))
+
+(defn sel-bottom [state]
+  (let [count-files (count (get-in state [:dir :files]))]
+    (-> state
+        (assoc-in [:dir :sel] (- count-files 1))
+        (adjust-scroll-pos))))
+
 
 (defn folder-up [state]
   (if (get-in state [:par-dir :file])

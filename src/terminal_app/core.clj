@@ -34,6 +34,8 @@
     \k (nav/sel-up state)
     \h (nav/folder-up state)
     \l (nav/folder-down state)
+    \g (nav/sel-top state)
+    \G (nav/sel-bottom state)
     \/ (search-files state [])
     \n (nav/search-res-down state)
     \N (nav/search-res-up state)
