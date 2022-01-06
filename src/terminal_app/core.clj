@@ -5,7 +5,6 @@
   (:require [clojure.java.io :as io])
   (:gen-class))
 
-
 (defn exit [state]
   (s/stop (state :scr))
   (println (str " exit-path: " (.getAbsolutePath (get-in state [:dir :file]))))
@@ -14,8 +13,8 @@
 (defn search-files [state query]
   (let [st (nav/update-search-results state query)
         scr (st :scr)]
-    (rdr/render-search st query)
     (rdr/do-render st)
+    (rdr/render-search st query)
     (s/redraw scr)
     (let [key-res (s/get-key-blocking scr {:interval 5})]
       (case key-res

@@ -6,9 +6,25 @@
 (defn sort-file-list [files]
   (vec (sort-by (juxt :nodir? :hidden? :name) files)))
 
+(defn bytes-to-n [bytes n]
+  (let [output (str (nth (iterate #(float (/ % 1024)) bytes) n))]
+    (if (> (count output) 5)
+      (subs output 0 5)
+      output)))
+
+(defn get-file-size-str [file]
+  (if-not (.isDirectory file)
+    (let [bytes (.length file)]
+      (cond (< bytes 1000) (str bytes " B")
+            (< bytes 1000000) (str (bytes-to-n bytes 1) " K")
+            (< bytes 1000000000) (str (bytes-to-n bytes 2) " M")
+            :else (str (bytes-to-n bytes 3) " G")))
+    ""))
+
 (defn generate-file-list [file]
   (sort-file-list (mapv (fn [f] {:obj f
                                  :name (.getName f)
+                                 :size (get-file-size-str f)
                                  :nodir? (not (.isDirectory f))
                                  :hidden? (.isHidden f)})
                         (.listFiles file))))
@@ -37,15 +53,18 @@
      :content (get-file-content (.getAbsolutePath file))}))
 
 (defn update-prev-state [state]
-  (assoc state
-         :prev-dir
-         (get-prev-state (get-sel-file (state :dir)))))
+  (let [file (get-sel-file (state :dir))]
+    (assoc state
+           :prev-dir
+           (get-prev-state file))))
 
-(defn update-top-bar [state]
+(defn update-bars [state]
   (let [dir (state :dir)]
     (update state :top-bar assoc
             :path (.getAbsolutePath (dir :file))
-            :file (get-in dir [:files (dir :sel) :name]))))
+            :file (get-in dir [:files (dir :sel) :name]))
+    ;; (update state :bottom-bar assoc)
+    ))
 
 (defn init-state [path scr]
   (let [file (io/file path)
@@ -63,6 +82,7 @@
      :prev-dir (get-prev-state (get-in files [0 :obj]))
      :top-bar  {:path path
                 :file (get-in files [0 :name])}
+     :bottom-bar {}
      :layout   {:size []
                 :top-bar-height 1
                 :bottom-bar-height 1
@@ -87,7 +107,7 @@
     (as-> state st
       (update-in st [:dir :sel] inc)
       (update-prev-state st)
-      (update-top-bar st)
+      (update-bars st)
       (adjust-scroll-pos st))
     state))
 
@@ -96,7 +116,7 @@
      (as-> state st
        (update-in st [:dir :sel] dec)
        (update-prev-state st)
-       (update-top-bar st)
+       (update-bars st)
        (adjust-scroll-pos st))
        state))
 
@@ -117,7 +137,7 @@
     (as-> state st
       (assoc st :dir (state :par-dir))
       (update-prev-state st)
-      (update-top-bar st)
+      (update-bars st)
       (if-let [par-file (.getParentFile (get-in st [:par-dir :file]))]
         (let [name      (.getName (get-in st[:par-dir :file]))
               par-files (generate-file-list par-file)
@@ -146,7 +166,7 @@
           (assoc :par-dir (state :dir))
           (assoc :dir (state :prev-dir))
           (update-prev-state)
-          (update-top-bar))
+          (update-bars))
       (do (open-file file)
           state))))
 

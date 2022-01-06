@@ -4,12 +4,14 @@
 (defn get-empty-str [len]
   (apply str (repeat len \space)))
 
-(defn prepare-line [f-list i width]
-  (if (< i (count f-list))
-    (let [line (f-list i)]
+(defn prepare-line [files i width]
+  (if (< i (count files))
+    (let [name (get-in files [i :name])
+          file-size (get-in files [i :size])]
       (str " "
-           (subs line 0 (min (count line) width))
-           (get-empty-str (- width (count line)))))
+           (subs name 0 (min (count name) (- width (count file-size))))
+           (get-empty-str (- width (count name) (count file-size)))
+           file-size))
     (get-empty-str (inc width))))
 
 (defn get-line-style [dir i]
@@ -26,7 +28,7 @@
     (let [current-file (+ i (dir :scroll-pos))]
       (put-string col-start
                   (+ i (ly :top-bar-height))
-                  (prepare-line (mapv (fn [n] (n :name)) (dir :files))
+                  (prepare-line (dir :files)
                                 current-file
                                 col-width)
                   (get-line-style dir current-file)))))
@@ -35,7 +37,11 @@
   (doseq [i (range (ly :list-height))]
     (put-string col-start
                 (+ i (ly :top-bar-height))
-                (prepare-line content i  col-width))))
+                (if (< i (count content))
+                  (let [line (content i)]
+                    (str line
+                         (get-empty-str (- col-width (count line)))))
+                  (get-empty-str (inc col-width))))))
 
 (defn render-top-bar [put-string width top-bar]
   (let [path-len (count (top-bar :path))]
@@ -48,6 +54,19 @@
                                        path-len
                                        (count (top-bar :file))
                                        2))))))
+
+(defn render-bottom-bar [put-string ly dir]
+  (let [selection-display (str (+ 1 (dir :sel))
+                               "/"
+                               (count (dir :files)))
+        size (ly :size)
+        bottom-line (- (size 1) 1)]
+    (put-string 0
+                bottom-line
+                (get-empty-str (size 0)))
+    (put-string (- (size 0) (count selection-display))
+                bottom-line
+                selection-display)))
 
 (defn render-search [state query]
   (let [size (get-in state [:layout :size])
@@ -72,9 +91,13 @@
 (defn do-render [state]
   (let [ly (state :layout)
         put-string (partial s/put-string (state :scr))]
+    (s/move-cursor (state :scr) 0 (- (get-in state [:layout :size 1]) 1))
     (render-top-bar put-string
                     (get-in ly [:size 0])
                     (state :top-bar))
+    (render-bottom-bar put-string
+                       ly
+                       (state :dir))
     (render-files put-string
                   0
                   (- (ly :col1-char) 2)
