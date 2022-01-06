@@ -47,7 +47,7 @@
             :path (.getAbsolutePath (dir :file))
             :file (get-in dir [:files (dir :sel) :name]))))
 
-(defn init-state [path]
+(defn init-state [path scr]
   (let [file (io/file path)
         files (generate-file-list file)
         par-file (.getParentFile file)
@@ -67,7 +67,8 @@
                 :top-bar-height 1
                 :bottom-bar-height 1
                 :col1-percent 0.2
-                :col2-percent 0.6}}))
+                :col2-percent 0.6}
+     :scr scr}))
 
 (defn sel-down [state]
   (if (< (get-in state [:dir :sel])
