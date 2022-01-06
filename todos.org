@@ -1,7 +1,6 @@
 #+TITLE: Todos
 
 * Features
-- rework scrolling by making calc-scroll function that handles all scrolling
 - specifically allow some files-types like json or sh for preview
 - add bottom bar
 - add file/folder informaion
@@ -12,5 +11,4 @@
 
 * Bugs
 - make sorting not prioratize xapital letters
-- issue when scrolling up and down at the bottom
 - crash when opening empty folder

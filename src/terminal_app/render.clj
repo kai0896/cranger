@@ -13,7 +13,7 @@
     (get-empty-str (inc width))))
 
 (defn get-line-style [dir i]
-  (let [sel (= (+ i (dir :scroll-pos)) (dir :sel))
+  (let [sel (= i (dir :sel))
         res (and (contains? dir :search-res) (.contains (dir :search-res) i))
         dir (not (get-in dir [:files i :nodir?]))]
     (cond sel {:fg :black :bg :cyan}
@@ -23,12 +23,13 @@
 
 (defn render-files [put-string col-start col-width ly dir]
   (doseq [i (range (ly :list-height))]
-    (put-string col-start
-                (+ i (ly :top-bar-height))
-                (prepare-line (mapv (fn [n] (n :name)) (dir :files))
-                              (+ i (dir :scroll-pos))
-                              col-width)
-                (get-line-style dir i))))
+    (let [current-file (+ i (dir :scroll-pos))]
+      (put-string col-start
+                  (+ i (ly :top-bar-height))
+                  (prepare-line (mapv (fn [n] (n :name)) (dir :files))
+                                current-file
+                                col-width)
+                  (get-line-style dir current-file)))))
 
 (defn render-prev-text [put-string col-start col-width ly content]
   (doseq [i (range (ly :list-height))]

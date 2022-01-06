@@ -70,6 +70,21 @@
                 :col2-percent 0.6}
      :scr scr}))
 
+(defn adjust-scroll-pos [state]
+  (let [sel (get-in state [:dir :sel])
+        height (get-in state [:layout :list-height])]
+    (update-in state
+               [:dir :scroll-pos]
+               #(let [outside-bottom (< (- (+ % height) sel 1) 0)
+                      outside-top (< sel %)]
+                   (cond outside-bottom (- sel height -1)
+                         outside-top sel
+                         :else %)))))
+
+(adjust-scroll-pos {:dir    {:sel         4
+                             :scroll-pos  4}
+                    :layout {:list-height 10}})
+
 (defn sel-down [state]
   (if (< (get-in state [:dir :sel])
          (- (count (get-in state [:dir :files])) 1))
@@ -77,10 +92,12 @@
       (update-in st [:dir :sel] inc)
       (update-prev-state st)
       (update-top-bar st)
-      (if (>= (+ (get-in st [:dir :sel]) (get-in st [:dir :scroll-pos]))
-              (get-in st [:layout :list-height]))
-        (update-in st [:dir :scroll-pos] inc)
-        st))
+      (adjust-scroll-pos st)
+      ;; (if (>= (+ (get-in st [:dir :sel]) (get-in st [:dir :scroll-pos]))
+      ;;         (get-in st [:layout :list-height]))
+      ;;   (update-in st [:dir :scroll-pos] inc)
+      ;;   st)
+      )
     state))
 
 (defn sel-up [state]
@@ -89,11 +106,13 @@
        (update-in st [:dir :sel] dec)
        (update-prev-state st)
        (update-top-bar st)
-       (if (< (get-in st [:dir :sel])
-              (get-in st [:dir :scroll-pos]))
-         (update-in st [:dir :scroll-pos] dec)
-         st))
-     state))
+       (adjust-scroll-pos st)
+       ;; (if (< (get-in st [:dir :sel])
+       ;;        (get-in st [:dir :scroll-pos]))
+       ;;   (update-in st [:dir :scroll-pos] dec)
+       ;;   st)
+         )
+       state))
 
 (defn folder-up [state]
   (if (get-in state [:par-dir :file])
@@ -136,12 +155,13 @@
 (defn search-res-sel [state fn-pos fn-comp]
   (let [dir (state :dir)]
     (if (not-empty (dir :search-res))
-      (update-in state
-                 [:dir :sel]
-                 #(if-let [new-sel (fn-pos (for [i (dir :search-res)
-                                                :when (fn-comp i %)] i))]
-                    new-sel
-                    (fn-pos (dir :search-res))))
+      (-> state
+          (update-in [:dir :sel]
+                     #(if-let [new-sel (fn-pos (for [i (dir :search-res)
+                                                     :when (fn-comp i %)] i))]
+                        new-sel
+                        (fn-pos (dir :search-res))))
+          (adjust-scroll-pos))
       state)))
 
 (defn search-res-down [state]
