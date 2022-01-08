@@ -4,14 +4,18 @@
 (defn get-empty-str [len]
   (apply str (repeat len \space)))
 
-(defn prepare-line [files i width]
+(defn prepare-line [files i width details?]
   (if (< i (count files))
     (let [name (get-in files [i :name])
-          file-size (get-in files [i :size])]
+          file-size (if details? (get-in files [i :size]) "")
+          space-for-name (- width (count file-size) 1)]
       (str " "
-           (subs name 0 (min (count name) (- width (count file-size))))
-           (get-empty-str (- width (count name) (count file-size)))
-           file-size))
+           (if (> (count name) (- space-for-name 1))
+             (str (subs name 0 (- space-for-name 2)) "… ")
+             name)
+           (get-empty-str (- space-for-name (count name)))
+           file-size
+           " "))
     (get-empty-str (inc width))))
 
 (defn get-line-style [dir i]
@@ -23,14 +27,17 @@
           dir {:fg :cyan}
           :else {})))
 
-(defn render-files [put-string col-start col-width ly dir]
+(defn render-files [put-string col-start col-width ly dir details?]
   (doseq [i (range (ly :list-height))]
-    (let [current-file (+ i (dir :scroll-pos))]
-      (put-string col-start
-                  (+ i (ly :top-bar-height))
+    (let [current-file (+ i (dir :scroll-pos))
+          pos-y (+ i (ly :top-bar-height))]
+      (put-string col-start pos-y " ")
+      (put-string (+ col-start 1)
+                  pos-y
                   (prepare-line (dir :files)
                                 current-file
-                                col-width)
+                                col-width
+                                details?)
                   (get-line-style dir current-file)))))
 
 (defn render-prev-text [put-string col-start col-width ly content]
@@ -99,15 +106,17 @@
                        ly
                        (state :dir))
     (render-files put-string
-                  0
-                  (- (ly :col1-char) 2)
+                  -1
+                  (- (ly :col1-char) 1)
                   ly
-                  (state :par-dir))
+                  (state :par-dir)
+                  false)
     (render-files put-string
                   (ly :col1-char)
                   (- (ly :col2-char) (ly :col1-char) 2)
                   ly
-                  (state :dir))
+                  (state :dir)
+                  true)
     (let [col-start (ly :col2-char)
           col-width (- (get-in ly [:size 0]) (ly :col2-char))]
       (if-let [content (get-in state [:prev-dir :content])]
@@ -120,4 +129,5 @@
                       col-start
                       col-width
                       ly
-                      (state :prev-dir))))))
+                      (state :prev-dir)
+                      false)))))
