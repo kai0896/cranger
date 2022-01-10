@@ -46,7 +46,8 @@
                 (+ i (ly :top-bar-height))
                 (if (< i (count content))
                   (let [line (content i)]
-                    (str line
+                    (str " "
+                         line
                          (get-empty-str (- col-width (count line)))))
                   (get-empty-str (inc col-width))))))
 

@@ -90,6 +90,14 @@
                 :col2-percent 0.6}
      :scr scr}))
 
+(defn resize-screen [state new-size]
+  (let [ly (state :layout)]
+    (update-in state [:layout] assoc
+               :size new-size
+               :list-height (- (new-size 1) (ly :top-bar-height) (ly :bottom-bar-height))
+               :col1-char (int (* (new-size 0) (ly :col1-percent)))
+               :col2-char (int (* (new-size 0) (ly :col2-percent))))))
+
 (defn adjust-scroll-pos [state]
   (let [sel (get-in state [:dir :sel])
         height (get-in state [:layout :list-height])]

@@ -1,9 +1,25 @@
 (ns terminal-app.core
-  (:require [lanterna.screen :as s])
   (:require [terminal-app.navigate :as nav])
   (:require [terminal-app.render :as rdr])
+  (:require [terminal-app.config :as conf])
   (:require [clojure.java.io :as io])
+  (:require [clojure.edn :as edn])
+  (:require [lanterna.screen :as s])
   (:gen-class))
+
+(def custome-config
+  (let [home (System/getProperty "user.home")
+        conf-path (str home "/.config/cranger/config.edn")
+        home-path (str home "/.cranger/config.edn")
+        in-conf-dir? (.exists (io/file conf-path))
+        in-home-dir? (.exists (io/file home-path))]
+    (cond in-conf-dir? (edn/read-string (slurp conf-path))
+          in-home-dir? (edn/read-string (slurp home-path)))))
+
+(def keybind-mapping
+  (if custome-config
+    (merge conf/keybinds (custome-config :keybinds))
+    conf/keybinds))
 
 (defn exit [state]
   (s/stop (state :scr))
@@ -28,33 +44,30 @@
                               query))))))
 
 (defn handle-input [state]
-  (case (s/get-key-blocking (state :scr) {:interval 5})
-    \j (nav/sel-down state)
-    \k (nav/sel-up state)
-    \h (nav/folder-up state)
-    \l (nav/folder-down state)
-    \g (nav/sel-top state)
-    \G (nav/sel-bottom state)
-    \/ (search-files state [])
-    \n (nav/search-res-down state)
-    \N (nav/search-res-up state)
-    :escape (nav/search-res-reset state)
-    \q (exit state)
-    state))
+  (let [key-char (s/get-key-blocking (state :scr) {:interval 5})
+        key-keyword (get keybind-mapping key-char nil)]
+    (case key-keyword
+      :sel-down (nav/sel-down state)
+      :sel-up (nav/sel-up state)
+      :folder-up (nav/folder-up state)
+      :folder-down (nav/folder-down state)
+      :sel-top (nav/sel-top state)
+      :sel-bottom (nav/sel-bottom state)
+      :search-files (search-files state [])
+      :search-result-down (nav/search-res-down state)
+      :search-result-up (nav/search-res-up state)
+      :search-result-reset (nav/search-res-reset state)
+      :exit (exit state)
+      state)))
 
-(defn get-screen-size [state]
-  (let [new-size (s/get-size (state :scr))
-        ly (state :layout)]
+(defn check-window-size [state]
+  (let [new-size (s/get-size (state :scr))]
     (if-not (= new-size (get-in state [:layout :size]))
-      (update-in state [:layout] assoc
-                 :size new-size
-                 :list-height (- (new-size 1) (ly :top-bar-height) (ly :bottom-bar-height))
-                 :col1-char (int (* (new-size 0) (ly :col1-percent)))
-                 :col2-char (int (* (new-size 0) (ly :col2-percent))))
+      (nav/resize-screen state new-size)
       state)))
 
 (defn input-cycle [state]
-  (when state (let [st (get-screen-size state)]
+  (when state (let [st (check-window-size state)]
                 (rdr/do-render st)
                 (s/redraw (st :scr))
                 (input-cycle (handle-input st)))))
