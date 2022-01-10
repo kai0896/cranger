@@ -1,14 +1,15 @@
 #+TITLE: Todos
 
 * Features
-- specifically allow some files-types like json or sh for preview
-- add bottom bar
-- add file/folder informaion
-- add half page up/down movement
-- add configuration file support
-- add documentation
+- add tests
 - add keybind helper
+- add settings to configuration file
+- add more to bottom bar
+- add half page up/down movement
+- add second navigation mode and file-copying
+- add documentation
+- specifically allow some files-types like json or sh for preview
 
 * Bugs
-- make sorting not prioratize xapital letters
+- make sorting not prioratize capital letters
 - crash when opening empty folder
