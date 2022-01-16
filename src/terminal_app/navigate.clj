@@ -32,10 +32,10 @@
 (defn get-sel-file [dir]
   (get-in dir [:files (dir :sel) :obj]))
 
-(defn get-file-content [file]
-  (let [file-info ((sh/sh "file" file) :out)]
+(defn get-file-content [file-path]
+  (let [file-info ((sh/sh "file" file-path) :out)]
     (if (.contains file-info " text")
-      (with-open [rdr (io/reader file)]
+      (with-open [rdr (io/reader file-path)]
         (vec (take 100 (line-seq rdr))))
       [(string/join " " (drop 1 (string/split (string/trim (str file-info)) #" ")))])))
 
@@ -52,19 +52,18 @@
      :scroll-pos nil
      :content (get-file-content (.getAbsolutePath file))}))
 
-(defn update-prev-state [state]
-  (let [file (get-sel-file (state :dir))]
+(defn update-prev-state [{:keys [dir] :as state}]
+  (let [file (get-sel-file dir)]
     (assoc state
            :prev-dir
            (get-prev-state file))))
 
-(defn update-bars [state]
-  (let [dir (state :dir)]
+(defn update-bars [{:keys [dir] :as state}]
     (update state :top-bar assoc
             :path (.getAbsolutePath (dir :file))
             :file (get-in dir [:files (dir :sel) :name]))
     ;; (update state :bottom-bar assoc)
-    ))
+    )
 
 (defn init-state [path scr]
   (let [file (io/file path)
@@ -90,42 +89,42 @@
                 :col2-percent 0.6}
      :scr scr}))
 
-(defn resize-screen [state new-size]
-  (let [ly (state :layout)]
-    (update-in state [:layout] assoc
-               :size new-size
-               :list-height (- (new-size 1) (ly :top-bar-height) (ly :bottom-bar-height))
-               :col1-char (int (* (new-size 0) (ly :col1-percent)))
-               :col2-char (int (* (new-size 0) (ly :col2-percent))))))
+(defn resize-screen [{:keys [layout] :as state} new-size]
+  (update-in state [:layout] assoc
+             :size new-size
+             :list-height (- (new-size 1) (layout :top-bar-height) (layout :bottom-bar-height))
+             :col1-char (int (* (new-size 0) (layout :col1-percent)))
+             :col2-char (int (* (new-size 0) (layout :col2-percent)))))
 
-(defn adjust-scroll-pos [state]
-  (let [sel (get-in state [:dir :sel])
-        height (get-in state [:layout :list-height])]
-    (update-in state
-               [:dir :scroll-pos]
-               #(let [outside-bottom (< (- (+ % height) sel 1) 0)
-                      outside-top (< sel %)]
-                   (cond outside-bottom (- sel height -1)
-                         outside-top sel
-                         :else %)))))
+(defn adjust-scroll-pos [{{:keys [sel]} :dir
+                          {:keys [list-height]} :layout
+                          :as state}]
+  (update-in state
+             [:dir :scroll-pos]
+             #(let [outside-bottom (< (- (+ % list-height) sel 1) 0)
+                    outside-top (< sel %)]
+                (cond outside-bottom (- sel list-height -1)
+                      outside-top sel
+                      :else %))))
 
-(defn sel-down [state]
-  (if (< (get-in state [:dir :sel])
-         (- (count (get-in state [:dir :files])) 1))
-    (as-> state st
-      (update-in st [:dir :sel] inc)
-      (update-prev-state st)
-      (update-bars st)
-      (adjust-scroll-pos st))
+(defn sel-down [{{:keys [sel files]} :dir
+                 :as state}]
+  (if (< sel (- (count files) 1))
+    (-> state
+      (update-in [:dir :sel] inc)
+      (update-prev-state)
+      (update-bars)
+      (adjust-scroll-pos))
     state))
 
-(defn sel-up [state]
-  (if (> (get-in state [:dir :sel]) 0)
-     (as-> state st
-       (update-in st [:dir :sel] dec)
-       (update-prev-state st)
-       (update-bars st)
-       (adjust-scroll-pos st))
+(defn sel-up [{{:keys [sel]} :dir
+               :as state}]
+  (if (> sel 0)
+     (-> state
+       (update-in [:dir :sel] dec)
+       (update-prev-state)
+       (update-bars)
+       (adjust-scroll-pos))
        state))
 
 (defn sel-top [state]
@@ -133,17 +132,18 @@
           :sel 0
           :scroll-pos 0))
 
-(defn sel-bottom [state]
-  (let [count-files (count (get-in state [:dir :files]))]
+(defn sel-bottom [{{:keys [files]} :dir
+               :as state}]
+  (let [count-files (count files)]
     (-> state
         (assoc-in [:dir :sel] (- count-files 1))
         (adjust-scroll-pos))))
 
 
-(defn folder-up [state]
-  (if (get-in state [:par-dir :file])
+(defn folder-up [{:keys [par-dir] :as state}]
+  (if (par-dir :file)
     (as-> state st
-      (assoc st :dir (state :par-dir))
+      (assoc st :dir par-dir)
       (update-prev-state st)
       (update-bars st)
       (if-let [par-file (.getParentFile (get-in st [:par-dir :file]))]
@@ -167,28 +167,28 @@
 (defn open-file [file]
   nil)
 
-(defn folder-down [state]
-  (let [file (get-sel-file (state :dir))]
+(defn folder-down [{:keys [dir prev-dir] :as state}]
+  (let [file (get-sel-file dir)]
     (if (.isDirectory file)
       (-> state
-          (assoc :par-dir (state :dir))
-          (assoc :dir (state :prev-dir))
+          (assoc :par-dir dir)
+          (assoc :dir prev-dir)
           (update-prev-state)
           (update-bars))
       (do (open-file file)
           state))))
 
-(defn search-res-sel [state fn-pos fn-comp]
-  (let [dir (state :dir)]
-    (if (not-empty (dir :search-res))
-      (-> state
-          (update-in [:dir :sel]
-                     #(if-let [new-sel (fn-pos (for [i (dir :search-res)
-                                                     :when (fn-comp i %)] i))]
-                        new-sel
-                        (fn-pos (dir :search-res))))
-          (adjust-scroll-pos))
-      state)))
+(defn search-res-sel [{:keys [dir] :as state}
+                      fn-pos fn-comp]
+  (if (not-empty (dir :search-res))
+    (-> state
+        (update-in [:dir :sel]
+                   #(if-let [new-sel (fn-pos (for [i (dir :search-res)
+                                                   :when (fn-comp i %)] i))]
+                      new-sel
+                      (fn-pos (dir :search-res))))
+        (adjust-scroll-pos))
+    state))
 
 (defn search-res-down [state]
   (search-res-sel state first >))
@@ -199,10 +199,10 @@
 (defn search-res-reset [state]
   (assoc-in state [:dir :search-res] []))
 
-(defn update-search-results [state query]
+(defn update-search-results [{{:keys [files]} :dir :as state}
+                             query]
   (if (not-empty query)
-    (let [files (get-in state [:dir :files])
-          search-res (vec (for [i (range (count files))
+    (let [search-res (vec (for [i (range (count files))
                                 :let [name (get-in files [i :name])]
                                 :when (.contains name (apply str query))]
                             i))]
