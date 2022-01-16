@@ -128,17 +128,19 @@
        state))
 
 (defn sel-top [state]
-  (update state :dir assoc
-          :sel 0
-          :scroll-pos 0))
+  (-> state
+      (update :dir assoc
+              :sel 0
+              :scroll-pos 0)
+      (update-prev-state)))
 
 (defn sel-bottom [{{:keys [files]} :dir
                :as state}]
   (let [count-files (count files)]
     (-> state
         (assoc-in [:dir :sel] (- count-files 1))
-        (adjust-scroll-pos))))
-
+        (adjust-scroll-pos)
+        (update-prev-state))))
 
 (defn folder-up [{:keys [par-dir] :as state}]
   (if (par-dir :file)
@@ -187,7 +189,8 @@
                                                    :when (fn-comp i %)] i))]
                       new-sel
                       (fn-pos (dir :search-res))))
-        (adjust-scroll-pos))
+        (adjust-scroll-pos)
+        (update-prev-state))
     state))
 
 (defn search-res-down [state]

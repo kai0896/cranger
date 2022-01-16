@@ -81,7 +81,7 @@
   (let [path (if (and (> (count args) 0)
                       (.exists (io/file (first args))))
                (first args)
-               "/home")
+               (System/getProperty "user.home"))
         scr (s/get-screen :text)]
     (s/start scr)
     (input-cycle (nav/init-state path scr))
