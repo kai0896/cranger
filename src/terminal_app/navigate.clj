@@ -52,25 +52,13 @@
      :scroll-pos nil
      :content (get-file-content (.getAbsolutePath file))}))
 
-(defn update-prev-state [{:keys [dir] :as state}]
-  (let [file (get-sel-file dir)]
-    (assoc state
-           :prev-dir
-           (get-prev-state file))))
-
-(defn update-bars [{:keys [dir] :as state}]
-    (update state :top-bar assoc
-            :path (.getAbsolutePath (dir :file))
-            :file (get-in dir [:files (dir :sel) :name]))
-    ;; (update state :bottom-bar assoc)
-    )
-
 (defn init-state [path scr]
   (let [file (io/file path)
         files (generate-file-list file)
         par-file (.getParentFile file)
         par-files (generate-file-list par-file)]
-    {:dir      {:file file
+    {:mode     :prev
+     :dir      {:file file
                 :files files
                 :sel 0
                 :scroll-pos 0}
@@ -96,6 +84,19 @@
              :col1-char (int (* (new-size 0) (layout :col1-percent)))
              :col2-char (int (* (new-size 0) (layout :col2-percent)))))
 
+(defn update-prev-state [{:keys [dir] :as state}]
+  (let [file (get-sel-file dir)]
+    (assoc state
+           :prev-dir
+           (get-prev-state file))))
+
+(defn update-bars [{:keys [dir] :as state}]
+    (update state :top-bar assoc
+            :path (.getAbsolutePath (dir :file))
+            :file (get-in dir [:files (dir :sel) :name]))
+    ;; (update state :bottom-bar assoc)
+    )
+
 (defn adjust-scroll-pos [{{:keys [sel]} :dir
                           {:keys [list-height]} :layout
                           :as state}]
@@ -107,14 +108,18 @@
                       outside-top sel
                       :else %))))
 
+(defn update-after-sel-change [state]
+  (-> state
+      (update-bars)
+      (update-prev-state)
+      (adjust-scroll-pos)))
+
 (defn sel-down [{{:keys [sel files]} :dir
                  :as state}]
   (if (< sel (- (count files) 1))
     (-> state
-      (update-in [:dir :sel] inc)
-      (update-prev-state)
-      (update-bars)
-      (adjust-scroll-pos))
+        (update-in [:dir :sel] inc)
+        (update-after-sel-change))
     state))
 
 (defn sel-up [{{:keys [sel]} :dir
@@ -122,25 +127,20 @@
   (if (> sel 0)
      (-> state
        (update-in [:dir :sel] dec)
-       (update-prev-state)
-       (update-bars)
-       (adjust-scroll-pos))
-       state))
+       (update-after-sel-change))
+     state))
 
 (defn sel-top [state]
   (-> state
-      (update :dir assoc
-              :sel 0
-              :scroll-pos 0)
-      (update-prev-state)))
+      (assoc-in [:dir :sel] 0)
+      (update-after-sel-change)))
 
 (defn sel-bottom [{{:keys [files]} :dir
                :as state}]
   (let [count-files (count files)]
     (-> state
         (assoc-in [:dir :sel] (- count-files 1))
-        (adjust-scroll-pos)
-        (update-prev-state))))
+        (update-after-sel-change))))
 
 (defn folder-up [{:keys [par-dir] :as state}]
   (if (par-dir :file)
@@ -189,8 +189,7 @@
                                                    :when (fn-comp i %)] i))]
                       new-sel
                       (fn-pos (dir :search-res))))
-        (adjust-scroll-pos)
-        (update-prev-state))
+        (update-after-sel-change))
     state))
 
 (defn search-res-down [state]
@@ -213,3 +212,19 @@
           (assoc-in [:dir :search-res] search-res)
           (search-res-down)))
     (assoc-in state [:dir :search-res] [])))
+
+(defn toggle-split-preview-mode [{:keys [mode dir] :as state}]
+  (case mode
+    :split (assoc state :mode :prev)
+    :prev (as-> state st
+            (assoc st :mode :split)
+            (if-not (st :split-dir)
+              (assoc st :split-dir dir)
+              st))
+    :else state))
+
+(defn split-mode-swap [{:keys [dir split-dir] :as state}]
+  (-> state
+      (assoc :dir split-dir)
+      (assoc :split-dir dir)
+      (update-after-sel-change)))

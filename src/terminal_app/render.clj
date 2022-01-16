@@ -51,7 +51,7 @@
                          (get-empty-str (- col-width (count line)))))
                   (get-empty-str (inc col-width))))))
 
-(defn render-top-bar [put-string width top-bar]
+(defn render-top-bar [put-string width top-bar mode]
   (let [path-len (count (top-bar :path))]
     (put-string 0 0
                 (str " " (top-bar :path) "/")
@@ -102,7 +102,8 @@
     (s/move-cursor (state :scr) 0 (- (get-in state [:layout :size 1]) 1))
     (render-top-bar put-string
                     (get-in ly [:size 0])
-                    (state :top-bar))
+                    (state :top-bar)
+                    (state :mode))
     (render-bottom-bar put-string
                        ly
                        (state :dir))
@@ -120,15 +121,22 @@
                   true)
     (let [col-start (ly :col2-char)
           col-width (- (get-in ly [:size 0]) (ly :col2-char))]
-      (if-let [content (get-in state [:prev-dir :content])]
-        (render-prev-text put-string
-                          col-start
-                          col-width
-                          ly
-                          content)
-        (render-files put-string
-                      col-start
-                      col-width
-                      ly
-                      (state :prev-dir)
-                      false)))))
+      (case (state :mode)
+        :split (render-files put-string
+                             col-start
+                             col-width
+                             ly
+                             (state :split-dir)
+                             false)
+        :prev (if-let [content (get-in state [:prev-dir :content])]
+                (render-prev-text put-string
+                                  col-start
+                                  col-width
+                                  ly
+                                  content)
+                (render-files put-string
+                              col-start
+                              col-width
+                              ly
+                              (state :prev-dir)
+                              false))))))
