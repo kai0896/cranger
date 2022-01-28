@@ -1,7 +1,7 @@
 (ns terminal-app.core
   (:require [terminal-app.navigate :as nav])
   (:require [terminal-app.render :as rdr])
-  (:require [terminal-app.config :as conf])
+  (:require [terminal-app.config :refer [default-config]])
   (:require [clojure.java.io :as io])
   (:require [clojure.edn :as edn])
   (:require [lanterna.screen :as s])
@@ -16,10 +16,12 @@
     (cond in-conf-dir? (edn/read-string (slurp conf-path))
           in-home-dir? (edn/read-string (slurp home-path)))))
 
-(def keybind-mapping
+(def config
   (if custome-config
-    (merge conf/keybinds (custome-config :keybinds))
-    conf/keybinds))
+    (merge-with merge default-config custome-config)
+    default-config))
+
+config
 
 (defn exit [state]
   (s/stop (state :scr))
@@ -36,16 +38,16 @@
       (case key-res
         :escape (nav/search-res-reset st)
         :enter st
-        :backspace (search-files st(if (not-empty query)
-                                         (pop query)
-                                         query))
-        (search-files st(if (char? key-res)
-                              (conj query key-res)
-                              query))))))
+        :backspace (search-files st (if (not-empty query)
+                                      (pop query)
+                                      query))
+        (search-files st (if (char? key-res)
+                           (conj query key-res)
+                           query))))))
 
 (defn handle-input [state]
   (let [key-char (s/get-key-blocking (state :scr) {:interval 5})
-        key-keyword (get keybind-mapping key-char nil)]
+        key-keyword (get-in config [:keybinds key-char] nil)]
     (case key-keyword
       :sel-down (nav/sel-down state)
       :sel-up (nav/sel-up state)
@@ -86,7 +88,7 @@
                (System/getProperty "user.home"))
         scr (s/get-screen :text)]
     (s/start scr)
-    (input-cycle (nav/init-state path scr))
+    (input-cycle (nav/init-state! path scr (config :colors)))
     ;; (input-cycle (nav/init-state "/home/kai") scr)
     (s/stop scr)
     (System/exit 1)))

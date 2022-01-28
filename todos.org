@@ -1,12 +1,13 @@
 #+TITLE: Todos
 
 * Features
+- finish split mode
+- add color mapping to state and config
 - add tests
 - add keybind helper
 - add settings to configuration file
 - add more to bottom bar
 - add half page up/down movement
-- add second navigation mode and file-copying
 - add documentation
 - specifically allow some files-types like json or sh for preview
 

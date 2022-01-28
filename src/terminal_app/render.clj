@@ -18,14 +18,16 @@
            " "))
     (get-empty-str (inc width))))
 
-(defn get-line-style [dir i]
-  (let [sel (= i (dir :sel))
-        res (and (contains? dir :search-res) (.contains (dir :search-res) i))
-        dir (not (get-in dir [:files i :nodir?]))]
-    (cond sel {:fg :black :bg :cyan}
-          res {:fg :yellow}
-          dir {:fg :cyan}
-          :else {})))
+(defn get-line-style [dir i colors]
+  (let [sel? (= i (dir :sel))
+        res? (and (contains? dir :search-res) (.contains (dir :search-res) i))
+        dir? (not (get-in dir [:files i :nodir?]))
+        color (cond res? (colors :search-res)
+                    dir? (colors :primary)
+                    :else (colors :text))]
+    (if sel?
+      {:fg :black :bg (if (= color :default) :white color)}
+      {:fg color})))
 
 (defn render-files [put-string col-start col-width ly dir details?]
   (doseq [i (range (ly :list-height))]
@@ -38,7 +40,7 @@
                                 current-file
                                 col-width
                                 details?)
-                  (get-line-style dir current-file)))))
+                  (get-line-style dir current-file (ly :colors))))))
 
 (defn render-prev-text [put-string col-start col-width ly content]
   (doseq [i (range (ly :list-height))]
@@ -51,11 +53,11 @@
                          (get-empty-str (- col-width (count line)))))
                   (get-empty-str (inc col-width))))))
 
-(defn render-top-bar [put-string width top-bar mode]
+(defn render-top-bar [put-string width top-bar mode colors]
   (let [path-len (count (top-bar :path))]
     (put-string 0 0
                 (str " " (top-bar :path) "/")
-                {:fg :cyan})
+                {:fg (colors :primary)})
     (put-string (+ path-len 2) 0
                 (str (top-bar :file)
                      (get-empty-str (- width
@@ -63,18 +65,23 @@
                                        (count (top-bar :file))
                                        2))))))
 
-(defn render-bottom-bar [put-string ly dir]
+(defn render-bottom-bar [put-string ly dir mode]
   (let [selection-display (str (+ 1 (dir :sel))
                                "/"
                                (count (dir :files)))
+        mode-info (case mode
+                    :prev "Preview-Mode"
+                    :split "Split-Mode"
+                    :else "")
+        text-right (str mode-info " " selection-display)
         size (ly :size)
         bottom-line (- (size 1) 1)]
     (put-string 0
                 bottom-line
                 (get-empty-str (size 0)))
-    (put-string (- (size 0) (count selection-display))
+    (put-string (- (size 0) (count text-right))
                 bottom-line
-                selection-display)))
+                text-right)))
 
 (defn render-search [state query]
   (let [size (get-in state [:layout :size])
@@ -103,10 +110,12 @@
     (render-top-bar put-string
                     (get-in ly [:size 0])
                     (state :top-bar)
-                    (state :mode))
+                    (state :mode)
+                    (get-in state [:layout :colors]))
     (render-bottom-bar put-string
                        ly
-                       (state :dir))
+                       (state :dir)
+                       (state :mode))
     (render-files put-string
                   -1
                   (- (ly :col1-char) 1)
@@ -125,7 +134,7 @@
         :split (render-files put-string
                              col-start
                              col-width
-                             ly
+                             (assoc-in ly [:colors :primary] (get-in ly [:colors :split-mode]))
                              (state :split-dir)
                              false)
         :prev (if-let [content (get-in state [:prev-dir :content])]
