@@ -137,15 +137,17 @@
                              (assoc-in ly [:colors :primary] (get-in ly [:colors :split-mode]))
                              (state :split-dir)
                              false)
-        :prev (if-let [content (get-in state [:prev-dir :content])]
-                (render-prev-text put-string
-                                  col-start
-                                  col-width
-                                  ly
-                                  content)
-                (render-files put-string
-                              col-start
-                              col-width
-                              ly
-                              (state :prev-dir)
-                              false))))))
+        :prev (let [sel (get-in state [:dir :sel])
+                    prev-dir (get-in state [:preview sel])]
+                (if-let [content (prev-dir :content)]
+                  (render-prev-text put-string
+                                    col-start
+                                    col-width
+                                    ly
+                                    content)
+                  (render-files put-string
+                                col-start
+                                col-width
+                                ly
+                                prev-dir
+                                false)))))))

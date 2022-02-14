@@ -32,27 +32,29 @@
 (defn get-sel-file [dir]
   (get-in dir [:files (dir :sel) :obj]))
 
-(defn get-file-content [file-path]
+(defn get-file-content! [file-path]
   (let [file-info ((sh/sh "file" file-path) :out)]
     (if (.contains file-info " text")
       (with-open [rdr (io/reader file-path)]
         (vec (take 100 (line-seq rdr))))
       [(string/join " " (drop 1 (string/split (string/trim (str file-info)) #" ")))])))
 
-(defn get-prev-state [file]
-  (if (.isDirectory file)
-    {:file file
-     :files (generate-file-list file)
-     :sel 0
-     :scroll-pos 0
-     :content nil}
-    {:file nil
-     :filess nil
-     :sel nil
-     :scroll-pos nil
-     :content (get-file-content (.getAbsolutePath file))}))
+(defn get-preview! [files]
+  (mapv (fn [{file :obj}]
+          (if (.isDirectory file)
+            {:file file
+             :files (generate-file-list file)
+             :sel 0
+             :scroll-pos 0
+             :content nil}
+            {:file nil
+             :filess nil
+             :sel nil
+             :scroll-pos nil
+             :content (get-file-content! (.getAbsolutePath file))}))
+        files))
 
-(defn init-state [path scr]
+(defn init-state! [path scr colors]
   (let [file (io/file path)
         files (generate-file-list file)
         par-file (.getParentFile file)
@@ -66,7 +68,7 @@
                 :files par-files
                 :sel 0
                 :scroll-pos 0}
-     :prev-dir (get-prev-state (get-in files [0 :obj]))
+     :preview  (get-preview! files)
      :top-bar  {:path path
                 :file (get-in files [0 :name])}
      :bottom-bar {}
@@ -74,7 +76,8 @@
                 :top-bar-height 1
                 :bottom-bar-height 1
                 :col1-percent 0.2
-                :col2-percent 0.6}
+                :col2-percent 0.6
+                :colors colors}
      :scr scr}))
 
 (defn resize-screen [{:keys [layout] :as state} new-size]
@@ -83,12 +86,6 @@
              :list-height (- (new-size 1) (layout :top-bar-height) (layout :bottom-bar-height))
              :col1-char (int (* (new-size 0) (layout :col1-percent)))
              :col2-char (int (* (new-size 0) (layout :col2-percent)))))
-
-(defn update-prev-state [{:keys [dir] :as state}]
-  (let [file (get-sel-file dir)]
-    (assoc state
-           :prev-dir
-           (get-prev-state file))))
 
 (defn update-bars [{:keys [dir] :as state}]
     (update state :top-bar assoc
@@ -111,7 +108,6 @@
 (defn update-after-sel-change [state]
   (-> state
       (update-bars)
-      (update-prev-state)
       (adjust-scroll-pos)))
 
 (defn sel-down [{{:keys [sel files]} :dir
@@ -142,11 +138,11 @@
         (assoc-in [:dir :sel] (- count-files 1))
         (update-after-sel-change))))
 
-(defn folder-up [{:keys [par-dir] :as state}]
+(defn folder-up! [{:keys [par-dir] :as state}]
   (if (par-dir :file)
     (as-> state st
       (assoc st :dir par-dir)
-      (update-prev-state st)
+      (assoc st :preview (get-preview! (get-in st [:dir :files])))
       (update-bars st)
       (if-let [par-file (.getParentFile (get-in st [:par-dir :file]))]
         (let [name      (.getName (get-in st[:par-dir :file]))
@@ -166,18 +162,19 @@
                 :scroll-pos 0)))
     state))
 
-(defn open-file [file]
+(defn open-file! [file]
   nil)
 
-(defn folder-down [{:keys [dir prev-dir] :as state}]
-  (let [file (get-sel-file dir)]
+(defn folder-down! [{:keys [dir preview] :as state}]
+  (let [file (get-sel-file dir)
+        new-dir (preview (dir :sel))]
     (if (.isDirectory file)
       (-> state
           (assoc :par-dir dir)
-          (assoc :dir prev-dir)
-          (update-prev-state)
+          (assoc :dir new-dir)
+          (assoc :preview (get-preview! (new-dir :files)))
           (update-bars))
-      (do (open-file file)
+      (do (open-file! file)
           state))))
 
 (defn search-res-sel [{:keys [dir] :as state}

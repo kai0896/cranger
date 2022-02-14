@@ -21,8 +21,6 @@
     (merge-with merge default-config custome-config)
     default-config))
 
-config
-
 (defn exit [state]
   (s/stop (state :scr))
   (println (str " exit-path: " (.getAbsolutePath (get-in state [:dir :file]))))
@@ -51,8 +49,8 @@ config
     (case key-keyword
       :sel-down (nav/sel-down state)
       :sel-up (nav/sel-up state)
-      :folder-up (nav/folder-up state)
-      :folder-down (nav/folder-down state)
+      :folder-up (nav/folder-up! state)
+      :folder-down (nav/folder-down! state)
       :sel-top (nav/sel-top state)
       :sel-bottom (nav/sel-bottom state)
       :search-files (search-files state [])
