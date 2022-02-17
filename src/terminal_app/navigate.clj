@@ -4,7 +4,10 @@
   (:require [clojure.java.io :as io]))
 
 (defn sort-file-list [files]
-  (vec (sort-by (juxt :nodir? :hidden? :name) files)))
+  (vec (sort-by (juxt :nodir? :hidden?)
+                (sort-by :name
+                         String/CASE_INSENSITIVE_ORDER
+                         files))))
 
 (defn bytes-to-n [bytes n]
   (let [output (str (nth (iterate #(float (/ % 1024)) bytes) n))]
@@ -21,16 +24,13 @@
             :else (str (bytes-to-n bytes 3) " G")))
     ""))
 
-(defn generate-file-list [file]
+(defn generate-file-list! [file]
   (sort-file-list (mapv (fn [f] {:obj f
                                  :name (.getName f)
                                  :size (get-file-size-str f)
                                  :nodir? (not (.isDirectory f))
                                  :hidden? (.isHidden f)})
                         (.listFiles file))))
-
-(defn get-sel-file [dir]
-  (get-in dir [:files (dir :sel) :obj]))
 
 (defn get-file-content! [file-path]
   (let [file-info ((sh/sh "file" file-path) :out)]
@@ -43,7 +43,7 @@
   (mapv (fn [{file :obj}]
           (if (.isDirectory file)
             {:file file
-             :files (generate-file-list file)
+             :files (generate-file-list! file)
              :sel 0
              :scroll-pos 0
              :content nil}
@@ -54,11 +54,11 @@
              :content (get-file-content! (.getAbsolutePath file))}))
         files))
 
-(defn init-state! [path scr colors]
+(defn init-state! [path scr config]
   (let [file (io/file path)
-        files (generate-file-list file)
+        files (generate-file-list! file)
         par-file (.getParentFile file)
-        par-files (generate-file-list par-file)]
+        par-files (generate-file-list! par-file)]
     {:mode     :prev
      :dir      {:file file
                 :files files
@@ -77,7 +77,8 @@
                 :bottom-bar-height 1
                 :col1-percent 0.2
                 :col2-percent 0.6
-                :colors colors}
+                :colors (config :colors)}
+     :keybinds (config :keybinds)
      :scr scr}))
 
 (defn resize-screen [{:keys [layout] :as state} new-size]
@@ -146,7 +147,7 @@
       (update-bars st)
       (if-let [par-file (.getParentFile (get-in st [:par-dir :file]))]
         (let [name      (.getName (get-in st[:par-dir :file]))
-              par-files (generate-file-list par-file)
+              par-files (generate-file-list! par-file)
               par-sel   (.indexOf (mapv (fn [f] (f :name)) par-files) name)]
           (update st :par-dir assoc
                   :file par-file
@@ -166,7 +167,7 @@
   nil)
 
 (defn folder-down! [{:keys [dir preview] :as state}]
-  (let [file (get-sel-file dir)
+  (let [file (get-in dir [:files (dir :sel) :obj])
         new-dir (preview (dir :sel))]
     (if (.isDirectory file)
       (-> state

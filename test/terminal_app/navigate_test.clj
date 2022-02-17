@@ -14,6 +14,6 @@
   (is (= (with-tmp-dir tmp-dir
            ;; (.mkdir (io/file tmp-dir "folder"))
            (spit (io/file tmp-dir "foo.txt") "I'm here")
-           (get-preview! (generate-file-list (io/file tmp-dir))))
+           (get-preview! (generate-file-list! (io/file tmp-dir))))
          [{:file nil, :filess nil, :sel nil, :scroll-pos nil, :content ["I'm here"]}])
       "gets a 'files'-vector and returns a vector with directory information or file information/content for every file in it"))

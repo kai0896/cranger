@@ -7,17 +7,16 @@
   (:require [lanterna.screen :as s])
   (:gen-class))
 
-(def custome-config
-  (let [home (System/getProperty "user.home")
-        conf-path (str home "/.config/cranger/config.edn")
-        home-path (str home "/.cranger/config.edn")
-        in-conf-dir? (.exists (io/file conf-path))
-        in-home-dir? (.exists (io/file home-path))]
-    (cond in-conf-dir? (edn/read-string (slurp conf-path))
-          in-home-dir? (edn/read-string (slurp home-path)))))
-
-(def config
-  (if custome-config
+(defn get-config!
+  "check for config file in home dir and merge it with default config if found"
+  []
+  (if-let [custome-config (let [home (System/getProperty "user.home")
+                                conf-path (str home "/.config/cranger/config.edn")
+                                home-path (str home "/.cranger/config.edn")
+                                in-conf-dir? (.exists (io/file conf-path))
+                                in-home-dir? (.exists (io/file home-path))]
+                            (cond in-conf-dir? (edn/read-string (slurp conf-path))
+                                  in-home-dir? (edn/read-string (slurp home-path))))]
     (merge-with merge default-config custome-config)
     default-config))
 
@@ -26,7 +25,9 @@
   (println (str " exit-path: " (.getAbsolutePath (get-in state [:dir :file]))))
   (System/exit 1))
 
-(defn search-files [state query]
+(defn search-files
+  "recursively ask for next char for the search query and catch exit conditions that return the new state"
+  [state query]
   (let [st (nav/update-search-results state query)
         scr (st :scr)]
     (rdr/do-render st)
@@ -43,9 +44,11 @@
                            (conj query key-res)
                            query))))))
 
-(defn handle-input [state]
+(defn handle-input!
+  "wait for input and call appropriate functions to change the state"
+  [state]
   (let [key-char (s/get-key-blocking (state :scr) {:interval 5})
-        key-keyword (get-in config [:keybinds key-char] nil)]
+        key-keyword (get-in state [:keybinds key-char] nil)]
     (case key-keyword
       :sel-down (nav/sel-down state)
       :sel-up (nav/sel-up state)
@@ -62,23 +65,28 @@
       :exit (exit state)
       state)))
 
-(defn check-window-size [state]
+(defn check-window-size!
+  "check if window size changed and adjust state accordingly"
+  [state]
   (let [new-size (s/get-size (state :scr))]
     (if-not (= new-size (get-in state [:layout :size]))
       (nav/resize-screen state new-size)
       state)))
 
-(defn input-cycle [state]
-  (when state (let [st (check-window-size state)]
+(defn input-cycle
+  "recursivly render, wait for input and adjust state accordingly"
+  [state]
+  (when state (let [st (check-window-size! state)]
                 (rdr/do-render st)
                 (s/redraw (st :scr))
-                (input-cycle (handle-input st)))))
+                (input-cycle (handle-input! st)))))
 
 (if-not true
   (def scr (s/get-screen :swing))
   ())
 
 (defn -main
+  "start screen, initialize state and main loop"
   [& args]
   (let [path (if (and (> (count args) 0)
                       (.exists (io/file (first args))))
@@ -86,7 +94,7 @@
                (System/getProperty "user.home"))
         scr (s/get-screen :text)]
     (s/start scr)
-    (input-cycle (nav/init-state! path scr (config :colors)))
+    (input-cycle (nav/init-state! path scr (get-config!)))
     ;; (input-cycle (nav/init-state "/home/kai") scr)
     (s/stop scr)
     (System/exit 1)))

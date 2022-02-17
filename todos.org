@@ -1,6 +1,9 @@
 #+TITLE: Todos
 
 * Features
+- remove file objects from state
+- add comments and tests to navigate functions
+- add comments to render functions
 - finish split mode
 - add color mapping to state and config
 - add tests
@@ -8,7 +11,6 @@
 - add settings to configuration file
 - add more to bottom bar
 - add half page up/down movement
-- add documentation
 - specifically allow some files-types like json or sh for preview
 
 * Bugs
