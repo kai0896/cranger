@@ -83,13 +83,12 @@
                 bottom-line
                 text-right)))
 
-(defn render-search [state query]
+(defn render-search [state scr query]
   (let [size (get-in state [:layout :size])
         bottom-line (- (size 1) 1)
         query-str (apply str query)
         res-count (count (get-in state [:dir :search-res]))
-        count-str (str "number of results: " res-count)
-        scr (state :scr)]
+        count-str (str "number of results: " res-count)]
     (s/put-string scr 0 bottom-line
                   (str " /"
                        query-str
@@ -103,10 +102,10 @@
                    (+ 2 (count query))
                    (- (size 1) 1))))
 
-(defn do-render [state]
+(defn do-render [state scr]
   (let [ly (state :layout)
-        put-string (partial s/put-string (state :scr))]
-    (s/move-cursor (state :scr) 0 (- (get-in state [:layout :size 1]) 1))
+        put-string (partial s/put-string scr)]
+    (s/move-cursor scr 0 (- (get-in state [:layout :size 1]) 1))
     (render-top-bar put-string
                     (get-in ly [:size 0])
                     (state :top-bar)

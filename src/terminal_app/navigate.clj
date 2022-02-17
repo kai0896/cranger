@@ -32,11 +32,11 @@
 
 (defn generate-file-list! [path]
   (sort-files (mapv (fn [file] {:path (.getAbsolutePath file)
-                                    :name (.getName file)
-                                    :size (get-file-size-str file)
-                                    :nodir? (not (.isDirectory file))
-                                    :hidden? (.isHidden file)})
-                        (.listFiles (io/file path)))))
+                                :name (.getName file)
+                                :size (get-file-size-str file)
+                                :nodir? (not (.isDirectory file))
+                                :hidden? (.isHidden file)})
+                    (.listFiles (io/file path)))))
 
 (defn get-file-content! [path]
   (let [file-info ((sh/sh "file" path) :out)]
@@ -60,7 +60,7 @@
                :content (get-file-content! path)}))
         files))
 
-(defn init-state! [path scr config]
+(defn init-state! [path config]
   (let [files (generate-file-list! path)
         par-path (.getParent (io/file path))
         par-files (generate-file-list! par-path)]
@@ -83,8 +83,7 @@
                 :col1-percent 0.2
                 :col2-percent 0.6
                 :colors (config :colors)}
-     :keybinds (config :keybinds)
-     :scr scr}))
+     :keybinds (config :keybinds)}))
 
 (defn resize-screen [{:keys [layout] :as state} new-size]
   (update-in state [:layout] assoc
