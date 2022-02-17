@@ -3,19 +3,25 @@
   (:require [clojure.string :as string])
   (:require [clojure.java.io :as io]))
 
-(defn sort-file-list [files]
+(defn sort-files
+  "sort files based on if they are directories, hidden and last the name"
+  [files]
   (vec (sort-by (juxt :nodir? :hidden?)
                 (sort-by :name
                          String/CASE_INSENSITIVE_ORDER
                          files))))
 
-(defn bytes-to-n [bytes n]
+(defn bytes-to-n
+  "return a max. 5 char string with the value number divided by 1024 n times"
+  [bytes n]
   (let [output (str (nth (iterate #(float (/ % 1024)) bytes) n))]
     (if (> (count output) 5)
       (subs output 0 5)
       output)))
 
-(defn get-file-size-str [file]
+(defn get-file-size-str
+  "if a file, return the file size converted to the appriopriate format as string, if a directory, return empty string"
+  [file]
   (if-not (.isDirectory file)
     (let [bytes (.length file)]
       (cond (< bytes 1000) (str bytes " B")
@@ -24,47 +30,46 @@
             :else (str (bytes-to-n bytes 3) " G")))
     ""))
 
-(defn generate-file-list! [file]
-  (sort-file-list (mapv (fn [f] {:obj f
-                                 :name (.getName f)
-                                 :size (get-file-size-str f)
-                                 :nodir? (not (.isDirectory f))
-                                 :hidden? (.isHidden f)})
-                        (.listFiles file))))
+(defn generate-file-list! [path]
+  (sort-files (mapv (fn [file] {:path (.getAbsolutePath file)
+                                    :name (.getName file)
+                                    :size (get-file-size-str file)
+                                    :nodir? (not (.isDirectory file))
+                                    :hidden? (.isHidden file)})
+                        (.listFiles (io/file path)))))
 
-(defn get-file-content! [file-path]
-  (let [file-info ((sh/sh "file" file-path) :out)]
+(defn get-file-content! [path]
+  (let [file-info ((sh/sh "file" path) :out)]
     (if (.contains file-info " text")
-      (with-open [rdr (io/reader file-path)]
+      (with-open [rdr (io/reader path)]
         (vec (take 100 (line-seq rdr))))
       [(string/join " " (drop 1 (string/split (string/trim (str file-info)) #" ")))])))
 
 (defn get-preview! [files]
-  (mapv (fn [{file :obj}]
-          (if (.isDirectory file)
-            {:file file
-             :files (generate-file-list! file)
-             :sel 0
-             :scroll-pos 0
-             :content nil}
-            {:file nil
-             :filess nil
-             :sel nil
-             :scroll-pos nil
-             :content (get-file-content! (.getAbsolutePath file))}))
+  (mapv (fn [{:keys [path nodir?]}]
+            (if (not nodir?)
+              {:path path
+               :files (generate-file-list! path)
+               :sel 0
+               :scroll-pos 0
+               :content nil}
+              {:path nil
+               :filess nil
+               :sel nil
+               :scroll-pos nil
+               :content (get-file-content! path)}))
         files))
 
 (defn init-state! [path scr config]
-  (let [file (io/file path)
-        files (generate-file-list! file)
-        par-file (.getParentFile file)
-        par-files (generate-file-list! par-file)]
+  (let [files (generate-file-list! path)
+        par-path (.getParent (io/file path))
+        par-files (generate-file-list! par-path)]
     {:mode     :prev
-     :dir      {:file file
+     :dir      {:path path
                 :files files
                 :sel 0
                 :scroll-pos 0}
-     :par-dir  {:file par-file
+     :par-dir  {:path par-path
                 :files par-files
                 :sel 0
                 :scroll-pos 0}
@@ -90,7 +95,7 @@
 
 (defn update-bars [{:keys [dir] :as state}]
     (update state :top-bar assoc
-            :path (.getAbsolutePath (dir :file))
+            :path (dir :path)
             :file (get-in dir [:files (dir :sel) :name]))
     ;; (update state :bottom-bar assoc)
     )
@@ -140,42 +145,44 @@
         (update-after-sel-change))))
 
 (defn folder-up! [{:keys [par-dir] :as state}]
-  (if (par-dir :file)
+  (if (par-dir :path)
     (as-> state st
       (assoc st :dir par-dir)
       (assoc st :preview (get-preview! (get-in st [:dir :files])))
       (update-bars st)
-      (if-let [par-file (.getParentFile (get-in st [:par-dir :file]))]
-        (let [name      (.getName (get-in st[:par-dir :file]))
-              par-files (generate-file-list! par-file)
-              par-sel   (.indexOf (mapv (fn [f] (f :name)) par-files) name)]
+      (let [par-file (io/file (get-in st [:par-dir :path]))]
+        (if-let [par-file-new (.getParentFile par-file)]
+          (let [name      (.getName par-file)
+                par-path (.getAbsolutePath par-file-new)
+                par-files (generate-file-list! par-path)
+                par-sel   (.indexOf (mapv (fn [f] (f :name)) par-files) name)]
+            (update st :par-dir assoc
+                    :path par-path
+                    :files par-files
+                    :sel par-sel
+                    :scroll-pos (max 0 (- par-sel
+                                          (get-in st [:layout :list-height])
+                                          -1))))
           (update st :par-dir assoc
-                  :file par-file
-                  :files par-files
-                  :sel par-sel
-                  :scroll-pos (max 0 (- par-sel
-                                        (get-in st [:layout :list-height])
-                                        -1))))
-        (update st :par-dir assoc
-                :file nil
-                :files []
-                :sel -1
-                :scroll-pos 0)))
+                  :path nil
+                  :files []
+                  :sel -1
+                  :scroll-pos 0))))
     state))
 
-(defn open-file! [file]
+(defn open-file! [path]
   nil)
 
 (defn folder-down! [{:keys [dir preview] :as state}]
-  (let [file (get-in dir [:files (dir :sel) :obj])
+  (let [sel-dir (get-in dir [:files (dir :sel)])
         new-dir (preview (dir :sel))]
-    (if (.isDirectory file)
+    (if (not (sel-dir :nodir?))
       (-> state
           (assoc :par-dir dir)
           (assoc :dir new-dir)
           (assoc :preview (get-preview! (new-dir :files)))
           (update-bars))
-      (do (open-file! file)
+      (do (open-file! (sel-dir :path))
           state))))
 
 (defn search-res-sel [{:keys [dir] :as state}

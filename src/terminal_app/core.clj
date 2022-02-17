@@ -22,7 +22,7 @@
 
 (defn exit [state]
   (s/stop (state :scr))
-  (println (str " exit-path: " (.getAbsolutePath (get-in state [:dir :file]))))
+  (println (str " \n exit-path: " (get-in state [:dir :path])))
   (System/exit 1))
 
 (defn search-files
