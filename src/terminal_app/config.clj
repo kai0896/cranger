@@ -17,6 +17,7 @@
               :escape :search-result-reset
               \m :toggle-mode
               \s :split-mode-swap
+              \> :copy
               \q :exit}
    :colors {:text :default
             :primary :cyan

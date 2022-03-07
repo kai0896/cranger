@@ -1,7 +1,8 @@
 (ns terminal-app.navigate
   (:require [clojure.java.shell :as sh])
   (:require [clojure.string :as string])
-  (:require [clojure.java.io :as io]))
+  (:require [clojure.java.io :as io])
+  (:require [me.raynes.fs :as fs]))
 
 (defn sort-files
   "sort files based on if they are directories, hidden and last the name"
@@ -268,4 +269,18 @@
         (assoc :dir split-dir)
         (assoc :split-dir dir)
         (update-after-sel-change))
+    state))
+
+(defn copy-sel!
+  "copy the selected file or directory to the split-dir"
+  [{:keys [dir split-dir mode] :as state}]
+  (if (= mode :split)
+    (let [sel-dir (get-in dir [:files (dir :sel)])
+          sel-path (sel-dir :path)
+          dest-path (str (split-dir :path) "/" (sel-dir :name))]
+      (if (fs/directory? sel-path)
+        (do (fs/copy-dir sel-path dest-path)
+            (assoc-in state [:split-dir :files] (generate-file-list! (split-dir :path))))
+        (do (fs/copy sel-path dest-path)
+            (assoc-in state [:split-dir :files] (generate-file-list! (split-dir :path))))))
     state))

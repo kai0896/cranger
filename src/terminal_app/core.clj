@@ -62,6 +62,7 @@
       :search-result-reset (nav/search-res-reset state)
       :toggle-mode (nav/toggle-split-preview-mode! state)
       :split-mode-swap (nav/split-mode-swap state)
+      :copy (nav/copy-sel! state)
       :exit (exit state scr)
       state)))
 
