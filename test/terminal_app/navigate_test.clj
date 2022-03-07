@@ -4,15 +4,10 @@
             [terminal-app.navigate :refer :all]
             [test-with-files.tools :refer [with-tmp-dir]]))
 
-;; (deftest navigate-test
-;;   (testing "file-list sorting"
-;;     (is (= [{}] 1))))
-;;
 (def tmp-dir "/")
 
 (deftest get-preview-test
   (is (= (with-tmp-dir tmp-dir
-           ;; (.mkdir (io/file tmp-dir "folder"))
            (spit (io/file tmp-dir "foo.txt") "I'm here")
            (get-preview! (generate-file-list! tmp-dir)))
          [{:path nil, :filess nil, :sel nil, :scroll-pos nil, :content ["I'm here"]}])
@@ -39,3 +34,20 @@
            (spit (io/file tmp-dir "foo.txt") "I'm here")
            (get-file-size-str (io/file tmp-dir "foo.txt")))
          "8 B")))
+
+(deftest generate-file-list-test
+  (with-tmp-dir tmp-dir
+    (spit (io/file tmp-dir "foo.txt") "I'm here")
+    (.mkdir (io/file tmp-dir "folder"))
+    (spit (io/file tmp-dir "folder/bar.txt") "I'm here")
+    (is (= (generate-file-list! tmp-dir)
+           [{:path (str tmp-dir "/folder")
+             :name "folder"
+             :size ""
+             :nodir? false
+             :hidden? false}
+            {:path (str tmp-dir "/foo.txt")
+             :name "foo.txt"
+             :size "8 B"
+             :nodir? true
+             :hidden? false}]))))
