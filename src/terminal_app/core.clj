@@ -10,6 +10,7 @@
 (defn get-config!
   "check for config file in home dir and merge it with default config if found"
   []
+  ;; TODO check that custom config is not breaking the program
   (if-let [custome-config (let [home (System/getProperty "user.home")
                                 conf-path (str home "/.config/cranger/config.edn")
                                 home-path (str home "/.cranger/config.edn")
@@ -59,7 +60,7 @@
       :search-result-down (nav/search-res-down state)
       :search-result-up (nav/search-res-up state)
       :search-result-reset (nav/search-res-reset state)
-      :toggle-mode (nav/toggle-split-preview-mode state)
+      :toggle-mode (nav/toggle-split-preview-mode! state)
       :split-mode-swap (nav/split-mode-swap state)
       :exit (exit state scr)
       state)))

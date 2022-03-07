@@ -1,11 +1,9 @@
 #+TITLE: Todos
 
 * Features
-- remove file objects from state
-- add comments and tests to navigate functions
+- add tests to navigate functions
 - add comments to render functions
 - finish split mode
-- add color mapping to state and config
 - add tests
 - add keybind helper
 - add settings to configuration file
@@ -14,5 +12,4 @@
 - specifically allow some files-types like json or sh for preview
 
 * Bugs
-- make sorting not prioratize capital letters
 - crash when opening empty folder

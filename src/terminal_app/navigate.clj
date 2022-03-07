@@ -30,7 +30,9 @@
             :else (str (bytes-to-n bytes 3) " G")))
     ""))
 
-(defn generate-file-list! [path]
+(defn generate-file-list!
+  "generate a list with information for every file in a directory based on a given directory path"
+  [path]
   (sort-files (mapv (fn [file] {:path (.getAbsolutePath file)
                                 :name (.getName file)
                                 :size (get-file-size-str file)
@@ -38,29 +40,35 @@
                                 :hidden? (.isHidden file)})
                     (.listFiles (io/file path)))))
 
-(defn get-file-content! [path]
+(defn get-file-content!
+  "generate the preview of a file as a string. If it is not a text file return file information as a string"
+  [path]
   (let [file-info ((sh/sh "file" path) :out)]
     (if (.contains file-info " text")
       (with-open [rdr (io/reader path)]
         (vec (take 100 (line-seq rdr))))
       [(string/join " " (drop 1 (string/split (string/trim (str file-info)) #" ")))])))
 
-(defn get-preview! [files]
+(defn get-preview!
+  "return a list with information for every file in the list, that is used to generate the preview"
+  [files]
   (mapv (fn [{:keys [path nodir?]}]
-            (if (not nodir?)
-              {:path path
-               :files (generate-file-list! path)
-               :sel 0
-               :scroll-pos 0
-               :content nil}
-              {:path nil
-               :filess nil
-               :sel nil
-               :scroll-pos nil
-               :content (get-file-content! path)}))
+          (if (not nodir?)
+            {:path path
+             :files (generate-file-list! path)
+             :sel 0
+             :scroll-pos 0
+             :content nil}
+            {:path nil
+             :filess nil
+             :sel nil
+             :scroll-pos nil
+             :content (get-file-content! path)}))
         files))
 
-(defn init-state! [path config]
+(defn init-state!
+  "generate the initial state, based on a starting path and the config"
+  [path config]
   (let [files (generate-file-list! path)
         par-path (.getParent (io/file path))
         par-files (generate-file-list! par-path)]
@@ -85,23 +93,29 @@
                 :colors (config :colors)}
      :keybinds (config :keybinds)}))
 
-(defn resize-screen [{:keys [layout] :as state} new-size]
+(defn resize-screen
+  "recalculate the layout parameters based on the terminal size"
+  [{:keys [layout] :as state} new-size]
   (update-in state [:layout] assoc
              :size new-size
              :list-height (- (new-size 1) (layout :top-bar-height) (layout :bottom-bar-height))
              :col1-char (int (* (new-size 0) (layout :col1-percent)))
              :col2-char (int (* (new-size 0) (layout :col2-percent)))))
 
-(defn update-bars [{:keys [dir] :as state}]
-    (update state :top-bar assoc
-            :path (dir :path)
-            :file (get-in dir [:files (dir :sel) :name]))
-    ;; (update state :bottom-bar assoc)
-    )
+(defn update-bars
+  "update the information of the bars"
+  [{:keys [dir] :as state}]
+  (update state :top-bar assoc
+          :path (dir :path)
+          :file (get-in dir [:files (dir :sel) :name]))
+  ;; (update state :bottom-bar assoc)
+  )
 
-(defn adjust-scroll-pos [{{:keys [sel]} :dir
-                          {:keys [list-height]} :layout
-                          :as state}]
+(defn adjust-scroll-pos
+  "set the scroll position depending on the curser position, so that the cursor doesn't leave the screen"
+  [{{:keys [sel]} :dir
+    {:keys [list-height]} :layout
+    :as state}]
   (update-in state
              [:dir :scroll-pos]
              #(let [outside-bottom (< (- (+ % list-height) sel 1) 0)
@@ -110,26 +124,32 @@
                       outside-top sel
                       :else %))))
 
-(defn update-after-sel-change [state]
+(defn update-after-sel-change
+  "update all values after the selection has been changed"
+  [state]
   (-> state
       (update-bars)
       (adjust-scroll-pos)))
 
-(defn sel-down [{{:keys [sel files]} :dir
-                 :as state}]
+(defn sel-down
+  "move the curser down if possible"
+  [{{:keys [sel files]} :dir
+    :as state}]
   (if (< sel (- (count files) 1))
     (-> state
         (update-in [:dir :sel] inc)
         (update-after-sel-change))
     state))
 
-(defn sel-up [{{:keys [sel]} :dir
-               :as state}]
+(defn sel-up
+  "move the curser up if possible"
+  [{{:keys [sel]} :dir
+    :as state}]
   (if (> sel 0)
-     (-> state
-       (update-in [:dir :sel] dec)
-       (update-after-sel-change))
-     state))
+    (-> state
+        (update-in [:dir :sel] dec)
+        (update-after-sel-change))
+    state))
 
 (defn sel-top [state]
   (-> state
@@ -143,7 +163,9 @@
         (assoc-in [:dir :sel] (- count-files 1))
         (update-after-sel-change))))
 
-(defn folder-up! [{:keys [par-dir] :as state}]
+(defn folder-up!
+  "move to the parent directory"
+  [{:keys [par-dir mode] :as state}]
   (if (par-dir :path)
     (as-> state st
       (assoc st :dir par-dir)
@@ -170,9 +192,12 @@
     state))
 
 (defn open-file! [path]
+  ;; TODO open files in the appropriate program depending on the file type
   nil)
 
-(defn folder-down! [{:keys [dir preview] :as state}]
+(defn folder-down!
+  "move to the selected folder or open the selected file"
+  [{:keys [dir preview] :as state}]
   (let [sel-dir (get-in dir [:files (dir :sel)])
         new-dir (preview (dir :sel))]
     (if (not (sel-dir :nodir?))
@@ -184,8 +209,10 @@
       (do (open-file! (sel-dir :path))
           state))))
 
-(defn search-res-sel [{:keys [dir] :as state}
-                      fn-pos fn-comp]
+(defn search-res-sel
+  "change selection to the next/previous search result"
+  [{:keys [dir] :as state}
+   fn-pos fn-comp]
   (if (not-empty (dir :search-res))
     (-> state
         (update-in [:dir :sel]
@@ -205,8 +232,10 @@
 (defn search-res-reset [state]
   (assoc-in state [:dir :search-res] []))
 
-(defn update-search-results [{{:keys [files]} :dir :as state}
-                             query]
+(defn update-search-results
+  "list indices of all files that match the given query and select next hit"
+  [{{:keys [files]} :dir :as state}
+   query]
   (if (not-empty query)
     (let [search-res (vec (for [i (range (count files))
                                 :let [name (get-in files [i :name])]
@@ -217,9 +246,13 @@
           (search-res-down)))
     (assoc-in state [:dir :search-res] [])))
 
-(defn toggle-split-preview-mode [{:keys [mode dir] :as state}]
+(defn toggle-split-preview-mode!
+  "toggle between split-mode and preview-mode"
+  [{:keys [mode dir] :as state}]
   (case mode
-    :split (assoc state :mode :prev)
+    :split (-> state
+               (assoc :mode :prev)
+               (assoc :preview (get-preview! (get-in state [:dir :files]))))
     :prev (as-> state st
             (assoc st :mode :split)
             (if-not (st :split-dir)
@@ -227,8 +260,12 @@
               st))
     :else state))
 
-(defn split-mode-swap [{:keys [dir split-dir] :as state}]
-  (-> state
-      (assoc :dir split-dir)
-      (assoc :split-dir dir)
-      (update-after-sel-change)))
+(defn split-mode-swap
+  "swap active, main dir with split-dir"
+  [{:keys [dir split-dir] :as state}]
+  (if split-dir
+    (-> state
+        (assoc :dir split-dir)
+        (assoc :split-dir dir)
+        (update-after-sel-change))
+    state))
