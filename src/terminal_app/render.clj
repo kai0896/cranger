@@ -69,7 +69,7 @@
                   (str (top-bar :path-split) "/")
                   {:fg (colors :split-mode)}))))
 
-(defn render-bottom-bar [put-string ly dir mode]
+(defn render-bottom-bar [put-string ly bottom-bar dir mode]
   (let [selection-display (str (+ 1 (dir :sel))
                                "/"
                                (count (dir :files)))
@@ -82,7 +82,7 @@
         bottom-line (- (size 1) 1)]
     (put-string 0
                 bottom-line
-                (get-empty-str (size 0)))
+                (str " " (bottom-bar :info) (get-empty-str (size 0))))
     (put-string (- (size 0) (count text-right))
                 bottom-line
                 text-right)))
@@ -140,6 +140,7 @@
                     (get-in state [:layout :colors]))
     (render-bottom-bar put-string
                        ly
+                       (state :bottom-bar)
                        (state :dir)
                        (state :mode))
     (render-files put-string

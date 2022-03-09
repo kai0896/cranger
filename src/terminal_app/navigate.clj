@@ -86,7 +86,7 @@
      :preview  (get-preview! files)
      :top-bar  {:path path
                 :file (get-in files [0 :name])}
-     :bottom-bar {}
+     :bottom-bar {:info ""}
      :layout   {:size []
                 :top-bar-height 1
                 :bottom-bar-height 1
@@ -107,12 +107,14 @@
 (defn update-bars
   "update the information of the bars"
   [{:keys [dir mode split-dir] :as state}]
-  (update state :top-bar assoc
-          :path (dir :path)
-          :file (get-in dir [:files (dir :sel) :name])
-          :path-split (if (= mode :split)
-                        (split-dir :path)
-                        "")))
+  (-> state
+      (update :top-bar assoc
+              :path (dir :path)
+              :file (get-in dir [:files (dir :sel) :name])
+              :path-split (if (= mode :split)
+                            (split-dir :path)
+                            ""))
+      (assoc-in [:bottom-bar :info] "")))
 
 (defn adjust-scroll-pos
   "set the scroll position depending on the curser position, so that the cursor doesn't leave the screen"
@@ -283,7 +285,7 @@
             (assoc-in state [:split-dir :files] (generate-file-list! (split-dir :path))))
         (do (fs/copy sel-path dest-path)
             (assoc-in state [:split-dir :files] (generate-file-list! (split-dir :path))))))
-    state))
+    (assoc-in state [:bottom-bar :info] "copy can only be used in split-mode")))
 
 (defn help [state]
   (assoc state :help true))
