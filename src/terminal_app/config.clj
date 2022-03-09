@@ -14,10 +14,11 @@
               \/ :search-files
               \n :search-result-down
               \N :search-result-up
-              :escape :search-result-reset
               \m :toggle-mode
               \s :split-mode-swap
               \> :copy
+              \? :help
+              :escape :reset
               \q :exit}
    :colors {:text :default
             :primary :cyan

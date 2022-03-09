@@ -74,6 +74,7 @@
         par-path (.getParent (io/file path))
         par-files (generate-file-list! par-path)]
     {:mode     :prev
+     :help     false
      :dir      {:path path
                 :files files
                 :sel 0
@@ -105,12 +106,13 @@
 
 (defn update-bars
   "update the information of the bars"
-  [{:keys [dir] :as state}]
+  [{:keys [dir mode split-dir] :as state}]
   (update state :top-bar assoc
           :path (dir :path)
-          :file (get-in dir [:files (dir :sel) :name]))
-  ;; (update state :bottom-bar assoc)
-  )
+          :file (get-in dir [:files (dir :sel) :name])
+          :path-split (if (= mode :split)
+                        (split-dir :path)
+                        "")))
 
 (defn adjust-scroll-pos
   "set the scroll position depending on the curser position, so that the cursor doesn't leave the screen"
@@ -230,9 +232,6 @@
 (defn search-res-up [state]
   (search-res-sel state last <))
 
-(defn search-res-reset [state]
-  (assoc-in state [:dir :search-res] []))
-
 (defn update-search-results
   "list indices of all files that match the given query and select next hit"
   [{{:keys [files]} :dir :as state}
@@ -258,7 +257,8 @@
             (assoc st :mode :split)
             (if-not (st :split-dir)
               (assoc st :split-dir dir)
-              st))
+              st)
+            (update-bars st))
     :else state))
 
 (defn split-mode-swap
@@ -284,3 +284,11 @@
         (do (fs/copy sel-path dest-path)
             (assoc-in state [:split-dir :files] (generate-file-list! (split-dir :path))))))
     state))
+
+(defn help [state]
+  (assoc state :help true))
+
+(defn reset [state]
+  (-> state
+      (assoc-in [:dir :search-res] [])
+      (assoc :help false)))

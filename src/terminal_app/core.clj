@@ -35,7 +35,7 @@
     (s/redraw scr)
     (let [key-res (s/get-key-blocking scr {:interval 5})]
       (case key-res
-        :escape (nav/search-res-reset st)
+        :escape (nav/reset st)
         :enter st
         :backspace (search-files st scr (if (not-empty query)
                                           (pop query)
@@ -59,10 +59,11 @@
       :search-files (search-files state scr [])
       :search-result-down (nav/search-res-down state)
       :search-result-up (nav/search-res-up state)
-      :search-result-reset (nav/search-res-reset state)
       :toggle-mode (nav/toggle-split-preview-mode! state)
       :split-mode-swap (nav/split-mode-swap state)
       :copy (nav/copy-sel! state)
+      :help (nav/help state)
+      :reset (nav/reset state)
       :exit (exit state scr)
       state)))
 

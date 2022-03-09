@@ -53,7 +53,7 @@
                          (get-empty-str (- col-width (count line)))))
                   (get-empty-str (inc col-width))))))
 
-(defn render-top-bar [put-string width top-bar mode colors]
+(defn render-top-bar [put-string width split-col top-bar mode colors]
   (let [path-len (count (top-bar :path))]
     (put-string 0 0
                 (str " " (top-bar :path) "/")
@@ -63,7 +63,11 @@
                      (get-empty-str (- width
                                        path-len
                                        (count (top-bar :file))
-                                       2))))))
+                                       2))))
+    (when (= mode :split)
+      (put-string (+ split-col 1) 0
+                  (str (top-bar :path-split) "/")
+                  {:fg (colors :split-mode)}))))
 
 (defn render-bottom-bar [put-string ly dir mode]
   (let [selection-display (str (+ 1 (dir :sel))
@@ -102,12 +106,35 @@
                    (+ 2 (count query))
                    (- (size 1) 1))))
 
+(defn key-or-char-tostr [item]
+  (if (keyword? item)
+    (name item)
+    (str item)))
+
+(defn render-help [put-string col-start col-width ly keybinds]
+  (let [keybinds-str (vec (sort-by last (partition 2 (map key-or-char-tostr (apply concat keybinds)))))
+        key-width 12]
+    (doseq [i (range (ly :list-height))]
+      (if (< i (count keybinds-str))
+        (do (put-string col-start
+                        (+ i (ly :top-bar-height))
+                        (let [line (first (keybinds-str i))]
+                          (str " " line (get-empty-str (- col-width (count line)))))
+                        {:fg (get-in ly [:colors :primary])})
+            (put-string (+ col-start key-width)
+                        (+ i (ly :top-bar-height))
+                        (last (keybinds-str i))))
+        (put-string col-start
+                    (+ i (ly :top-bar-height))
+                    (get-empty-str (inc col-width)))))))
+
 (defn do-render [state scr]
   (let [ly (state :layout)
         put-string (partial s/put-string scr)]
     (s/move-cursor scr 0 (- (get-in state [:layout :size 1]) 1))
     (render-top-bar put-string
                     (get-in ly [:size 0])
+                    (ly :col2-char)
                     (state :top-bar)
                     (state :mode)
                     (get-in state [:layout :colors]))
@@ -129,24 +156,30 @@
                   true)
     (let [col-start (ly :col2-char)
           col-width (- (get-in ly [:size 0]) (ly :col2-char))]
-      (case (state :mode)
-        :split (render-files put-string
-                             col-start
-                             col-width
-                             (assoc-in ly [:colors :primary] (get-in ly [:colors :split-mode]))
-                             (state :split-dir)
-                             false)
-        :prev (let [sel (get-in state [:dir :sel])
-                    prev-dir (get-in state [:preview sel])]
-                (if-let [content (prev-dir :content)]
-                  (render-prev-text put-string
-                                    col-start
-                                    col-width
-                                    ly
-                                    content)
-                  (render-files put-string
-                                col-start
-                                col-width
-                                ly
-                                prev-dir
-                                false)))))))
+      (if (state :help)
+        (render-help put-string
+                     col-start
+                     col-width
+                     ly
+                     (state :keybinds))
+        (case (state :mode)
+          :split (render-files put-string
+                               col-start
+                               col-width
+                               (assoc-in ly [:colors :primary] (get-in ly [:colors :split-mode]))
+                               (state :split-dir)
+                               false)
+          :prev (let [sel (get-in state [:dir :sel])
+                      prev-dir (get-in state [:preview sel])]
+                  (if-let [content (prev-dir :content)]
+                    (render-prev-text put-string
+                                      col-start
+                                      col-width
+                                      ly
+                                      content)
+                    (render-files put-string
+                                  col-start
+                                  col-width
+                                  ly
+                                  prev-dir
+                                  false))))))))
