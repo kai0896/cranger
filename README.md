@@ -1,22 +1,41 @@
 # terminal-app
 
-A simple terminal file manager like ranger
+A simple terminal file manager inspired by ranger.
+It is work in progress and many essential features like opening a file are not implemented yet.
 
-## Installation
+## Concept
 
-TODO: set up graalvm
+There are two different modes, Preview-mode and Split-mode.
+Preview-mode is like ranger, there are 3 collumns, the first one shows the parent directory, the middle one the current directory where you can move between the files, and the right one shows a preview of the selected element. If a directory is selected, the files inside will be displayed and if a text-file is selected the content of it will be displayed.
 
-Download from http://example.com/FIXME.
+In Spit-mode, the preview will be replaced with another directory. This allows the user to easily copy files from the main directory to the second one on the right side.
 
 ## Usage
 
-FIXME: explanation
+Running the file-manager will always open the home directory, however passing in $PWD as first argument will run it at the current working directory.
 
-    $ java -jar terminal-app-0.1.0-standalone.jar [args]
+### Navigation
 
-## Infos
+Similar to ranger, the navigation is done using vim-like keybindings by default. All usable keys can be displayed by pressing '?'. The basic movements are done using either the arrow-keys or hjkl.
 
-running it will always open the home directory, however one can pass $PWD as first argument to run it in the current working directory
+### Features
+
+At this point, only a few arbitrarily selected features that seemed interesting to implement are present.
+This also means some essential features like opening files, deleting files or selecting multiple files are not there yet.
+
+#### Search
+
+Press '/' and insert the search query. This will color all matching files yellow and select the next result to the curser. 
+After pressing the enter-key, 'N' and 'n' can be used to jump up or down between the results.
+
+### Copy files
+
+In order to copy a file to another directory, the Split-mode can be used:
+Navigate to the path you want to copy to. Then press 'm' to activate Split-mode, which will show the directory at the right side as well. Now move to the file you want to copy and press '>' to copy it over.
+
+### Configuration
+
+TODO
 
 ## License
 
