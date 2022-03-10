@@ -83,10 +83,6 @@
                 (s/redraw scr)
                 (input-cycle (handle-input! st scr) scr))))
 
-(if-not true
-  (def scr (s/get-screen :swing))
-  ())
-
 (defn -main
   "start screen, initialize state and main loop"
   [& args]
