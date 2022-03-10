@@ -35,7 +35,7 @@ After pressing the enter-key, 'N' and 'n' can be used to jump up or down between
 **Copy files:** In order to copy a file to another directory, the Split-mode can be used:
 Navigate to the path you want to copy to. Then press 'm' to activate Split-mode, which will show the directory at the right side as well. Now move to the file you want to copy and press '>' to copy it over.
 
-**Configuration:** Using configuration-files, keybindings and colors can be changed. Config-files have to be either '~/.config/cranger/config.edn' or '~/.cranger/config.edn'. Here is an example:
+**Configuration:** Using configuration-files, keybindings and colors can be changed. Config-files have to be either '\~/.config/cranger/config.edn' or '\~/.cranger/config.edn'. Here is an example:
 
 ``` clojure
 {:keybinds {\w :sel-up
